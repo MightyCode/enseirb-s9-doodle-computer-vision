@@ -1,3 +1,11 @@
+# MacOS crap
+.DS_Store
+
+Carla
+.python-version
+resources/*
+results/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
