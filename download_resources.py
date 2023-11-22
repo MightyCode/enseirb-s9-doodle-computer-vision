@@ -3,6 +3,7 @@ import zipfile
 import gdown
 
 resources_folder: str = "resources"
+classification_folder: str = os.path.join(resources_folder, "classification")
 
 def down_drive(url: str, dest: str):
     gdown.download(url, dest, quiet=False)
@@ -17,7 +18,7 @@ def download():
     
     down_drive(link, zip_file_path)
 
-    unzip_file(zip_file_path, resources_folder)
+    unzip_file(zip_file_path, classification_folder)
 
     os.remove(zip_file_path)
 
