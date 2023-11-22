@@ -1,6 +1,5 @@
 scikit-learn
 gdown
-os-sys
 numpy
 matplotlib
 torch
