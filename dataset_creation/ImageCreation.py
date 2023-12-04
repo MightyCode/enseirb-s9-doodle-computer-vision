@@ -3,8 +3,6 @@ import numpy as np
 
 class ImageCreation:
     @staticmethod
-
-
     def get_bounds(data, factor=10):
         """Return bounds of data."""
         min_x = None
@@ -76,5 +74,8 @@ class ImageCreation:
             pen_x = next_x
             pen_y = next_y
         
+        # Apply Gaussian Blur to blur the strokes
+        image = cv2.GaussianBlur(image, (3, 3), 0)
+
         return image
     

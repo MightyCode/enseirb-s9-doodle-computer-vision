@@ -22,7 +22,6 @@ class GrayscaleDataset(Dataset):
 
     def reshape_image(self, img):
         return img.reshape(self.width, self.height)
-        
 
     def normalize_image(self, img):
         return img/255.0
