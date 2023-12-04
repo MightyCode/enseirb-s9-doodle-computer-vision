@@ -26,15 +26,16 @@ class Autoencoder(nn.Module):
             if i < len(layer_sizes) - 2:
                 self.encoder.add_module(f"encoder_relu_{i}", nn.ReLU())
                 self.encoder.add_module(f"encoder_dropout_{i}", nn.Dropout(0.3))
-                self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
+                #self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
 
         # Add decoder layers
-        for i in range(len(layer_sizes) - 1, 0, -1):
+        for i in range(len(layer_sizes)-1, 0, -1):
             self.decoder.add_module(f"decoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i-1]))
             if i > 1:
                 self.decoder.add_module(f"decoder_relu_{i}", nn.ReLU())
                 self.decoder.add_module(f"encoder_dropout_{i}", nn.Dropout(0.3))
-                self.decoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
+                #self.decoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i-1]))
+
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
 
@@ -43,6 +44,27 @@ class Autoencoder(nn.Module):
         decoded = self.decoder(encoded)
         
         return encoded, decoded
+    
+    def _filter_batchnorm_layers(self, layers):
+        filtered_layers = []
+        for layer in layers.children():
+            if isinstance(layer, nn.BatchNorm1d):
+                continue
+            elif isinstance(layer, nn.Sequential):
+                filtered_layers.extend(self._filter_batchnorm_layers(layer))
+            else:
+                filtered_layers.append(layer)
+        return filtered_layers
+    
+    def predict(self, x):
+        #is used to predict 1 result, without batch
+        layers_without_bn = self._filter_batchnorm_layers(self)
+        result = x
+
+        for layer in layers_without_bn:
+            result = layer(result)
+
+        return result
 
     def print_model(self):
         print(self.encoder)
@@ -109,14 +131,14 @@ class Autoencoder(nn.Module):
                     nb_train_images+=1
                     img_as_tensor = inputs[i]
 
-                    _, decoded = self(img_as_tensor)
+                    _, decoded = self.forward(img_as_tensor)
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
                     decoded_matrix = decoded.cpu().detach().numpy()
 
                     train_psnr += psnr(image_matrix, decoded_matrix)
                     train_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
-
+            
             for data in valid_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
@@ -125,13 +147,47 @@ class Autoencoder(nn.Module):
                     nb_valid_images+=1
                     img_as_tensor = inputs[i]
 
-                    _, decoded = self(img_as_tensor)
+                    _, decoded = self.forward(img_as_tensor)
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
                     decoded_matrix = decoded.cpu().detach().numpy()
 
                     validation_psnr += psnr(image_matrix, decoded_matrix)
                     validation_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
+
+            """for data in train_loader:
+                inputs, labels = data
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                _, decoded = self.forward(inputs)
+
+                for i in range(inputs.size(0)):
+                    nb_train_images+=1
+                    img_as_tensor = inputs[i]
+                    decoded_as_tensor = decoded[i]
+
+                    image_matrix = img_as_tensor.cpu().detach().numpy()
+                    decoded_matrix = decoded_as_tensor.cpu().detach().numpy()
+
+                    train_psnr += psnr(image_matrix, decoded_matrix)
+                    train_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
+
+            for data in valid_loader:
+                inputs, labels = data
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                _, decoded = self.forward(inputs)
+
+                for i in range(inputs.size(0)):
+                    nb_valid_images+=1
+                    img_as_tensor = inputs[i]
+                    decoded_as_tensor = decoded[i]
+
+                    image_matrix = img_as_tensor.cpu().detach().numpy()
+                    decoded_matrix = decoded_as_tensor.cpu().detach().numpy()
+
+                    validation_psnr += psnr(image_matrix, decoded_matrix)
+                    validation_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())"""
 
             train_psnr /= nb_train_images
             train_ssim /= nb_train_images
@@ -188,7 +244,7 @@ class Autoencoder(nn.Module):
 
             # Reconstructed images
             train_tensor = torch.from_numpy(train_set[index][0]).to(self.device)
-            encoded, decoded = self(train_tensor)
+            _, decoded = self.forward(train_tensor)
             decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -205,7 +261,7 @@ class Autoencoder(nn.Module):
 
             # Reconstructed images
             validation_tensor = torch.from_numpy(validation_set[index][0]).to(self.device)
-            _, decoded = self(validation_tensor)
+            _, decoded = self.forward(validation_tensor)
             decoded = decoded.view(-1, self.height, self.width)
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
