@@ -8,9 +8,9 @@ from skimage.metrics import structural_similarity as ssim
 import matplotlib.pyplot as plt
 import random
 
-class Autoencoder(nn.Module):
+class BaseAutoencoder(nn.Module):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
-        super(Autoencoder, self).__init__()
+        super(BaseAutoencoder, self).__init__()
         self.architecture = layer_sizes
         self.encoder = nn.Sequential()
         self.decoder = nn.Sequential()
@@ -19,27 +19,6 @@ class Autoencoder(nn.Module):
         self.width = width
         self.height = height
         self.classes = classes
-
-        # Add encoder layers
-        for i in range(len(layer_sizes) - 1):
-            self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
-            if i < len(layer_sizes) - 2:
-                self.encoder.add_module(f"encoder_relu_{i}", nn.ReLU())
-                self.encoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
-                if batch_norm:
-                    self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
-
-        # Add decoder layers
-        for i in range(len(layer_sizes)-1, 0, -1):
-            self.decoder.add_module(f"decoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i-1]))
-            if i > 1:
-                self.decoder.add_module(f"decoder_relu_{i}", nn.ReLU())
-                self.decoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
-                if batch_norm:
-                    self.decoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i-1]))
-
-
-        self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
 
     def forward(self, x):
         encoded = self.encoder(x)
@@ -127,7 +106,7 @@ class Autoencoder(nn.Module):
                     decoded_as_tensor = decoded[i]
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
-                    decoded_matrix = decoded_as_tensor.cpu().detach().numpy()
+                    decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
                     train_psnr += psnr(image_matrix, decoded_matrix)
                     train_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
@@ -144,7 +123,7 @@ class Autoencoder(nn.Module):
                     decoded_as_tensor = decoded[i]
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
-                    decoded_matrix = decoded_as_tensor.cpu().detach().numpy()
+                    decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
                     validation_psnr += psnr(image_matrix, decoded_matrix)
                     validation_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())

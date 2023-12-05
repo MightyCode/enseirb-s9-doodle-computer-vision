@@ -38,7 +38,6 @@ class StrokeImageDataset(Dataset):
             created_image = self.normalize_image(created_image)
 
         # convert the image width x height to width*height
-        created_image = created_image.reshape(-1)
 
         label = self.labels[key]
 
