@@ -68,7 +68,7 @@ class ImageCreation:
             next_x = pen_x + d_x
             next_y = pen_y + d_y
 
-            if data[i, 2] != 1:
+            if i > 0 and data[i - 1, 2] == 0:
                 cv2.line(image, (int(pen_x), int(pen_y)), (int(next_x), int(next_y)), 255, stroke_size)
 
             pen_x = next_x
