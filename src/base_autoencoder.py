@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import random
 
 class BaseAutoencoder(nn.Module):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
+    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, encode_class=False):
         super(BaseAutoencoder, self).__init__()
         self.architecture = layer_sizes
         self.encoder = nn.Sequential()
@@ -20,11 +20,13 @@ class BaseAutoencoder(nn.Module):
         self.height = height
         self.classes = classes
 
-    def forward(self, x):
-        encoded = self.encoder(x)
-        decoded = self.decoder(encoded)
-        
-        return encoded, decoded
+        self.encode_class = encode_class
+
+    def add_class_to_encoded(self, encoded_features, labels):
+        raise("Not implemented")
+
+    def forward(self, x, labels=None):
+        raise("Not implemented")
     
     def _filter_batchnorm_layers(self, layers):
         filtered_layers = []
@@ -51,9 +53,8 @@ class BaseAutoencoder(nn.Module):
         self.train_loss_values = []
         self.validation_loss_values = []
 
-        self.train()
-
         for epoch in range(num_epochs):
+            self.train()
             # Train by batch of images
             for data in train_loader:
                 inputs, labels = data
@@ -63,7 +64,7 @@ class BaseAutoencoder(nn.Module):
                 optimizer.zero_grad()
                 
                 # Forward pass
-                _, decoded = self.forward(inputs)
+                _, decoded = self.forward(inputs, labels=labels)
                 loss = criterion(input=decoded, target=inputs)
 
                 # Backward pass
@@ -73,14 +74,14 @@ class BaseAutoencoder(nn.Module):
             # Train loss
             self.train_loss_values.append(loss.item())
 
+            self.eval()
             # loop on validation to compute validation loss
             for data in valid_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                
                 # Forward pass
-                _, decoded = self.forward(inputs)
+                _, decoded = self.forward(inputs, labels=labels)
                 loss = criterion(input=decoded, target=inputs)
 
             self.validation_loss_values.append(loss.item())
@@ -98,7 +99,7 @@ class BaseAutoencoder(nn.Module):
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs)
+                _, decoded = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_train_images+=1
@@ -115,7 +116,7 @@ class BaseAutoencoder(nn.Module):
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs)
+                _, decoded = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_valid_images+=1
@@ -139,8 +140,6 @@ class BaseAutoencoder(nn.Module):
             self.validation_ssim_values.append(validation_ssim)
             print(f'Epoch [{epoch+1}/{num_epochs}]\tLoss: {self.train_loss_values[-1]:.4f}\tTest Loss {self.validation_loss_values[-1]:.4f}\t', end = "")
             print(f'Train PSNR: {train_psnr:.4f}\tTrain SSIM: {train_ssim:.4f}\tValidation PSNR: {validation_psnr:.4f}\tValidation SSIM: {validation_ssim:.4f}')
-
-        self.eval()
     
     def plot_psnr_ssim(self):
         _, axes = plt.subplots(1, 3, figsize=(12, 6))
@@ -182,8 +181,11 @@ class BaseAutoencoder(nn.Module):
             axes[0, i].axis('off')
 
             # Reconstructed images
-            train_tensor = torch.from_numpy(train_set[index][0]).to(self.device)
-            _, decoded = self.forward(train_tensor.unsqueeze(0))
+            image, label = train_set[index]
+            train_tensor = torch.from_numpy(image).to(self.device)
+            label_tensor = torch.tensor(label).to(self.device)
+
+            _, decoded = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -199,8 +201,11 @@ class BaseAutoencoder(nn.Module):
             axes[0, i].axis('off')
 
             # Reconstructed images
-            validation_tensor = torch.from_numpy(validation_set[index][0]).to(self.device)
-            _, decoded = self.forward(validation_tensor.unsqueeze(0))
+            image, label = validation_set[index]
+            validation_tensor = torch.from_numpy(image).to(self.device)
+            label_tensor = torch.tensor(label).to(self.device)
+
+            _, decoded = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -220,7 +225,7 @@ class BaseAutoencoder(nn.Module):
             test_images, test_labels = batch
             test_images, test_labels = test_images.to(self.device), test_labels.to(self.device)
 
-            _, decoded = self(test_images)
+            _, decoded = self(test_images, labels=test_labels)
 
             decoded_matrices = decoded.cpu().detach().numpy()
             test_images_matrices = test_images.cpu().detach().numpy()
@@ -258,8 +263,11 @@ class BaseAutoencoder(nn.Module):
         axes[0, 0].set_title("Original : " + psnr_image_label)
         axes[0, 0].axis('off')
 
-        psnr_image_tensor = torch.from_numpy(image_set[lowest_psnr_index][0]).to(self.device)
-        _, decoded = self(psnr_image_tensor.unsqueeze(0))
+        image, label = image_set[lowest_psnr_index]
+        psnr_image_tensor = torch.from_numpy(image).to(self.device)
+        label_tensor = torch.tensor(label).to(self.device)
+
+        _, decoded = self(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[0, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -271,8 +279,11 @@ class BaseAutoencoder(nn.Module):
         axes[1, 0].set_title("Original : " + ssim_image_label)
         axes[1, 0].axis('off')
 
-        ssim_image_tensor = torch.from_numpy(image_set[lowest_ssim_index][0]).to(self.device)
-        _, decoded = self(ssim_image_tensor.unsqueeze(0))
+        image, label = image_set[lowest_ssim_index]
+        ssim_image_tensor = torch.from_numpy(image).to(self.device)
+        label_tensor = torch.tensor(label).to(self.device)
+
+        _, decoded = self(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[1, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')

@@ -37,7 +37,5 @@ class GrayscaleDataset(Dataset):
     def get_image_2d(self, key: int):
         return self.data[key].reshape(self.width, self.height)
     
-
-    
     def __len__(self):
         return len(self.data)
