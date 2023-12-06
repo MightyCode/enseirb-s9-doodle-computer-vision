@@ -28,7 +28,7 @@ class ConvAutoencoder(BaseAutoencoder):
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
     
-    def forward(self, x):
+    def forward(self, x, labels=None):
         x = x.view(-1, 1, self.width, self.height)
 
         encoded = self.encoder(x)
