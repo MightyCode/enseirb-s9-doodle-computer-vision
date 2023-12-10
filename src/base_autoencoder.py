@@ -59,7 +59,6 @@ class BaseAutoencoder(nn.Module):
             for data in train_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-                print(inputs.shape)
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 
@@ -174,7 +173,7 @@ class BaseAutoencoder(nn.Module):
 
         for i in range(num_cols // 2):
             # Train images
-            index = random.randint(0, train_set.__len__())
+            index = random.randint(0, train_set.__len__() - 1)
 
             axes[0, i].imshow(train_set.get_image_2d(index), cmap='gray')
             axes[0, i].set_title(f"Train original {self.classes[train_set[index][1]]}")
@@ -194,7 +193,7 @@ class BaseAutoencoder(nn.Module):
         
         for i in range(num_cols // 2, num_cols):
             # Test images
-            index = random.randint(0, validation_set.__len__())
+            index = random.randint(0, validation_set.__len__() - 1)
 
             axes[0, i].imshow(validation_set.get_image_2d(index), cmap='gray')
             axes[0, i].set_title(f"Validation original, {self.classes[validation_set[index][1]]}")
