@@ -82,8 +82,8 @@ class BaseVariationalAutoencoder(nn.Module):
                 optimizer.zero_grad()
                 
                 # Forward pass
-                _, decoded = self.forward(inputs, labels=labels)
-                loss = ((inputs - decoded)**2).sum() + self.kl
+                mu, sigma, z, decoded = self.forward(inputs, labels=labels)
+                loss = criterion(mu, sigma, decoded, inputs)
 
                 # Backward pass
                 loss.backward()
@@ -99,8 +99,8 @@ class BaseVariationalAutoencoder(nn.Module):
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 # Forward pass
-                _, decoded = self.forward(inputs, labels=labels)
-                loss = ((inputs - decoded)**2).sum() + self.kl
+                mu, sigma, z, decoded = self.forward(inputs, labels=labels)
+                loss = criterion(mu, sigma, decoded, inputs)
 
             self.validation_loss_values.append(loss.item())
 
@@ -117,7 +117,7 @@ class BaseVariationalAutoencoder(nn.Module):
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs, labels=labels)
+                _, _, _, decoded = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_train_images+=1
@@ -134,7 +134,7 @@ class BaseVariationalAutoencoder(nn.Module):
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs, labels=labels)
+                _, _, _, decoded = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_valid_images+=1

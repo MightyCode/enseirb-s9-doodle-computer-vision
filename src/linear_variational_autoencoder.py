@@ -8,9 +8,9 @@ import torch
 import torch.nn as nn
 
 class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
+    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0):
         super().__init__(layer_sizes, device, width, height, classes, 
-                dropout=0., batch_norm=True)
+                dropout=0., batch_norm=True, rl=rl, kl=kl)
 
         for i in range(len(layer_sizes) - 2):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
@@ -37,9 +37,6 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         self.print_model()
 
         self.N = torch.distributions.Normal(0, 1)
-        self.N.loc = self.N.loc.cuda() # hack to get sampling on the GPU
-        self.N.scale = self.N.scale.cuda()
-        self.kl = 0
     
     def print_model(self):
         print(self.encoder)
@@ -50,20 +47,17 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
     def forward(self, x, labels=None):
         encoded = self.encoder(x)
 
+        print("encoded", encoded.max(), encoded.min())
         mu =  self.mean(encoded)
         print("mu", mu.max(), mu.min())
         sigma = torch.exp(self.log_var(encoded))    
 
         print
-        z = mu + sigma * self.N.sample(mu.shape)
+        z = mu + sigma * torch.randn_like(sigma, device=self.device)
         print("z", z.max(), z.min())
-
-        # KL divergence
-
-        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
-        print("kl", self.kl)
 
         decoded = self.decoder(z)
         print("decoded", decoded.max(), decoded.min())
+        print("===================")
 
-        return z, decoded
+        return mu, sigma, z, decoded
