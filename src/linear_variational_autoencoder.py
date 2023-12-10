@@ -47,17 +47,17 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
     def forward(self, x, labels=None):
         encoded = self.encoder(x)
 
-        print("encoded", encoded.max(), encoded.min())
+        #print("encoded", encoded.max(), encoded.min())
         mu =  self.mean(encoded)
-        print("mu", mu.max(), mu.min())
-        sigma = torch.exp(self.log_var(encoded))    
+        #print("mu", mu.max(), mu.min())
+        sigma = self.log_var(encoded)
 
-        print
+        #print
         z = mu + sigma * torch.randn_like(sigma, device=self.device)
-        print("z", z.max(), z.min())
+        #print("z", z.max(), z.min())
 
         decoded = self.decoder(z)
-        print("decoded", decoded.max(), decoded.min())
-        print("===================")
+        #print("decoded", decoded.max(), decoded.min())
+        #print("===================")
 
         return mu, sigma, z, decoded

@@ -53,12 +53,12 @@ class BaseVariationalAutoencoder(nn.Module):
     def vae_loss(self, mean, logvar, decoded, inputs):
         # Fonction de perte de reconstruction
         reproduction_loss = F.mse_loss(decoded, inputs, reduction='sum')
-
+        
         # KL divergence entre la distribution latente et une distribution normale
         KLD = - 0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
         # Combinaison des deux termes de perte
-        return self.rl*reproduction_loss + self.kl*KLD
+        return self.rl * reproduction_loss + self.kl * KLD
 
     def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, optimizer,  criterion=vae_loss, num_epochs=10):
 
@@ -203,7 +203,7 @@ class BaseVariationalAutoencoder(nn.Module):
             train_tensor = torch.from_numpy(image).to(self.device)
             label_tensor = torch.tensor(label).to(self.device)
 
-            _, decoded = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            _, _, _, decoded = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -223,7 +223,7 @@ class BaseVariationalAutoencoder(nn.Module):
             validation_tensor = torch.from_numpy(image).to(self.device)
             label_tensor = torch.tensor(label).to(self.device)
 
-            _, decoded = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            _, _, _, decoded = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -243,7 +243,7 @@ class BaseVariationalAutoencoder(nn.Module):
             test_images, test_labels = batch
             test_images, test_labels = test_images.to(self.device), test_labels.to(self.device)
 
-            _, decoded = self(test_images, labels=test_labels)
+            _, _, _, decoded = self(test_images, labels=test_labels)
 
             decoded_matrices = decoded.cpu().detach().numpy()
             test_images_matrices = test_images.cpu().detach().numpy()
@@ -285,7 +285,7 @@ class BaseVariationalAutoencoder(nn.Module):
         psnr_image_tensor = torch.from_numpy(image).to(self.device)
         label_tensor = torch.tensor(label).to(self.device)
 
-        _, decoded = self(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+        _, _, _, decoded = self(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[0, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -301,7 +301,7 @@ class BaseVariationalAutoencoder(nn.Module):
         ssim_image_tensor = torch.from_numpy(image).to(self.device)
         label_tensor = torch.tensor(label).to(self.device)
 
-        _, decoded = self(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+        _,_, _, decoded = self(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[1, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
