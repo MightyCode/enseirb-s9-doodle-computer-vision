@@ -23,7 +23,7 @@ class ConvAutoencoder(BaseAutoencoder):
             if i > 1:
                 self.decoder.add_module(f"decoder_relu_{i}", nn.ReLU())
                 self.decoder.add_module(f"encoder_upsample_{i}", nn.Upsample(scale_factor=2, mode='nearest'))
-                self.encoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
+                self.decoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
                 if batch_norm:
                     self.decoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm2d(layer_sizes[i-1]))
 
