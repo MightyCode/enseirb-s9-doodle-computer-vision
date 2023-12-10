@@ -19,7 +19,7 @@ class StrokeImageDataset(Dataset):
         self.labels = np.array(labels)
 
     def reshape_image(self, img : np.ndarray):
-        return img.reshape(self.width, self.height)
+        return img.reshape(self.width * self.height)
 
     def normalize_image(self, img : np.ndarray):
         return img.astype(np.float32) / 255.0
@@ -31,7 +31,7 @@ class StrokeImageDataset(Dataset):
 
         created_image = ImageCreation.createImage(img, (self.width, self.height), self.stroke_size, self.factor)
 
-        if self.reshape:
+        if not self.reshape:
             created_image = self.reshape_image(created_image)
 
         if self.normalize:

@@ -28,9 +28,6 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
 
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
-        
-    def add_class_to_encoded(self, encoded_features, labels):
-        return torch.cat((encoded_features, labels.unsqueeze(1)), dim=1)
     
     def forward_full(self, x, labels):
         encoded = self.encoder(x)
@@ -45,6 +42,6 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
         return encoded, encoded_class, decoded
 
     def forward(self, x, labels):
-        encoded, encoded_class, decoded = self.forward_full(x, labels)
+        _, encoded_class, decoded = self.forward_full(x, labels)
 
         return encoded_class, decoded

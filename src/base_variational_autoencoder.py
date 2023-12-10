@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
@@ -8,9 +9,12 @@ from skimage.metrics import structural_similarity as ssim
 import matplotlib.pyplot as plt
 import random
 
-class BaseAutoencoder(nn.Module):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, encode_class=False):
-        super(BaseAutoencoder, self).__init__()
+class BaseVariationalAutoencoder(nn.Module):
+    def __init__(self, layer_sizes, device, width, height, classes, 
+                 dropout=0., batch_norm=True, encode_class=False,
+                 rl = 1.0,
+                 kl = 0.0):
+        super(BaseVariationalAutoencoder, self).__init__()
         self.architecture = layer_sizes
         self.encoder = nn.Sequential()
         self.decoder = nn.Sequential()
@@ -21,6 +25,9 @@ class BaseAutoencoder(nn.Module):
         self.classes = classes
 
         self.encode_class = encode_class
+
+        self.rl = rl
+        self.kl = kl
 
     def add_class_to_encoded(self, encoded_features, labels):
         raise("Not implemented")
@@ -43,7 +50,18 @@ class BaseAutoencoder(nn.Module):
         print(self.encoder)
         print(self.decoder)
 
-    def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, criterion, optimizer, num_epochs):
+    def vae_loss(self, mean, logvar, decoded, inputs):
+        # Fonction de perte de reconstruction
+        reproduction_loss = F.mse_loss(decoded, inputs, reduction='sum')
+
+        # KL divergence entre la distribution latente et une distribution normale
+        KLD = - 0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+
+        # Combinaison des deux termes de perte
+        return self.rl*reproduction_loss + self.kl*KLD
+
+    def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, optimizer,  criterion=vae_loss, num_epochs=10):
+
         self.train_psnr_values = []
         self.train_ssim_values = []
 
@@ -59,13 +77,13 @@ class BaseAutoencoder(nn.Module):
             for data in train_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-                print(inputs.shape)
+
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 
                 # Forward pass
                 _, decoded = self.forward(inputs, labels=labels)
-                loss = criterion(input=decoded, target=inputs)
+                loss = ((inputs - decoded)**2).sum() + self.kl
 
                 # Backward pass
                 loss.backward()
@@ -82,7 +100,7 @@ class BaseAutoencoder(nn.Module):
 
                 # Forward pass
                 _, decoded = self.forward(inputs, labels=labels)
-                loss = criterion(input=decoded, target=inputs)
+                loss = ((inputs - decoded)**2).sum() + self.kl
 
             self.validation_loss_values.append(loss.item())
 
