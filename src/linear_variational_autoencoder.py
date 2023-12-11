@@ -18,7 +18,7 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
                 self.encoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
                 if batch_norm:
                     self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
-        
+
         # Add decoder layers
         for i in range(len(layer_sizes)-1, 0, -1):
             self.decoder.add_module(f"decoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i-1]))
@@ -27,6 +27,8 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
                 self.decoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
                 if batch_norm:
                     self.decoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i-1]))
+
+        self.embedding = nn.Embedding(len(self.classes), layer_sizes[-1])
 
         self.mean = nn.Linear(layer_sizes[-2], layer_sizes[-1])
         self.log_var = nn.Linear(layer_sizes[-2], layer_sizes[-1])
@@ -41,7 +43,7 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         print(self.log_var)
         print(self.decoder)
     
-    def forward(self, x, labels=None):
+    def forward(self, x, labels):
         encoded = self.encoder(x)
 
         #print("encoded", encoded.max(), encoded.min())
@@ -53,8 +55,13 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         z = mu + sigma * torch.randn_like(sigma, device=self.device)
         #print("z", z.max(), z.min())
 
+        embedding = self.embedding(labels)
+
+        # encoded and embedding is tensor of same shape, add it
+        z_class = z + embedding
+
         decoded = self.decoder(z)
         #print("decoded", decoded.max(), decoded.min())
         #print("===================")
 
-        return mu, sigma, z, decoded
+        return mu, sigma, z, z_class, decoded

@@ -19,8 +19,9 @@ class BaseVariationalAutoencoder(BaseModel):
         self.kl = kl
 
     def get_decoded(self, input, labels):
-        _, _, _, decoded = self.forward(input, labels)
-        return decoded
+        pack = self.forward(input, labels)
+
+        return pack[-1]
 
     def vae_loss(self, mean, logvar, decoded, inputs):
         # Fonction de perte de reconstruction
@@ -70,7 +71,13 @@ class BaseVariationalAutoencoder(BaseModel):
                 optimizer.zero_grad()
                 
                 # Forward pass
-                mu, sigma, z, decoded = self.forward(inputs, labels=labels)
+                pack = self.forward(inputs, labels=labels)
+
+                mu = pack[0]
+                sigma = pack[1]
+
+                decoded = pack[-1]
+
                 rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
                 loss = rl_loss + kl_loss
 
@@ -93,7 +100,13 @@ class BaseVariationalAutoencoder(BaseModel):
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                     # Forward pass
-                    mu, sigma, z, decoded = self.forward(inputs, labels=labels)
+                    pack = self.forward(inputs, labels=labels)
+
+                    mu = pack[0]
+                    sigma = pack[1]
+
+                    decoded = pack[-1]
+
                     rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
                     loss = rl_loss + kl_loss
 
@@ -114,7 +127,9 @@ class BaseVariationalAutoencoder(BaseModel):
                     inputs, labels = data
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                    _, _, _, decoded = self.forward(inputs, labels=labels)
+                    pack = self.forward(inputs, labels=labels)
+
+                    decoded = pack[-1]
 
                     for i in range(inputs.size(0)):
                         nb_train_images += 1
@@ -131,7 +146,9 @@ class BaseVariationalAutoencoder(BaseModel):
                     inputs, labels = data
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                    _, _, _, decoded = self.forward(inputs, labels=labels)
+                    pack = self.forward(inputs, labels=labels)
+
+                    decoded = pack[-1]
 
                     for i in range(inputs.size(0)):
                         nb_valid_images += 1
@@ -156,11 +173,11 @@ class BaseVariationalAutoencoder(BaseModel):
             
             print(f'Ep [{epoch+1}/{num_epochs}]', end=" ")
             print(f'T L: {self.losses["train"]["total_loss"][-1]:.4f}', end=" ")
-            print(f'T RL L: {self.losses["train"]["reconstruction_loss"][-1]:.4f}', end=" ")
-            print(f'T KL L: {self.losses["train"]["kl_loss"][-1]:.4f}', end=" ")
+            print(f'T RL: {self.losses["train"]["reconstruction_loss"][-1]:.4f}', end=" ")
+            print(f'T KL: {self.losses["train"]["kl_loss"][-1]:.4f}', end=" ")
             print(f'V L: {self.losses["validation"]["total_loss"][-1]:.4f}', end=" ")
-            print(f'V RL L: {self.losses["validation"]["reconstruction_loss"][-1]:.4f}', end=" ")
-            print(f'V KL L: {self.losses["validation"]["kl_loss"][-1]:.4f}', end=" ")
+            print(f'V RL: {self.losses["validation"]["reconstruction_loss"][-1]:.4f}', end=" ")
+            print(f'V KL: {self.losses["validation"]["kl_loss"][-1]:.4f}', end=" ")
             print(f'T PSNR: {self.metrics["train"]["psnr"][-1]:.4f}', end=" ")
             print(f'T SSIM: {self.metrics["train"]["ssim"][-1]:.4f}', end=" ")
             print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import math
 
 class ImageGenerator():
     def __init__(self, classes, device, model):
@@ -99,6 +100,30 @@ class ImageGenerator():
             axes[row_index, col_index].imshow(generated_images[i], cmap='gray')
             axes[row_index, col_index].axis('off')
             axes[row_index, col_index].set_title(self.classes[i])
+
+        plt.tight_layout()
+        plt.suptitle('Generated images')
+
+        plt.subplots_adjust(top=0.9)
+
+        plt.show()
+
+    
+    def show_generated_images_per_vector(self, vectors, labels=[], image_size=None):
+        generated_images = self.generate_images_for_mean_vectors(vectors, image_size=image_size)
+
+        num_cols = 4 if len(vectors) >= 4 else len(vectors)
+        num_rows = math.ceil(len(vectors) / num_cols)
+
+        _, axes = plt.subplots(num_rows, num_cols, figsize=(3 * num_cols, 3 * num_rows))
+
+        for i in range(len(vectors)):
+            row_index = i // num_cols
+            col_index = i % num_cols
+            axes[row_index, col_index].imshow(generated_images[i], cmap='gray')
+            axes[row_index, col_index].axis('off')
+            if len(labels) > i:
+                axes[row_index, col_index].set_title(labels[i])
 
         plt.tight_layout()
         plt.suptitle('Generated images')
