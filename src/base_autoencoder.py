@@ -11,7 +11,10 @@ class BaseAutoencoder(BaseModel):
     def __init__(self, layer_sizes, device, width, height, classes, encode_class=False):
         super().__init__(layer_sizes, device, width, height, classes, encode_class)
 
-
+    def get_decoded(self, input, labels):
+        _, decoded = self.forward(input, labels)
+        return decoded
+    
     def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, criterion, optimizer, num_epochs):
         self.train_psnr_values = []
         self.train_ssim_values = []

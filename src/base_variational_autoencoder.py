@@ -18,6 +18,9 @@ class BaseVariationalAutoencoder(BaseModel):
         self.rl = rl
         self.kl = kl
 
+    def get_decoded(self, input, labels):
+        _, _, _, decoded = self.forward(input, labels)
+        return decoded
 
     def vae_loss(self, mean, logvar, decoded, inputs):
         # Fonction de perte de reconstruction

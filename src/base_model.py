@@ -42,6 +42,9 @@ class BaseModel(nn.Module):
         print(self.encoder)
         print(self.decoder)
 
+    def get_decoded(self, input, labels):
+        raise("Not implemented")
+
     def plot_psnr_ssim(self):
         _, axes = plt.subplots(1, 3, figsize=(12, 6))
 
@@ -86,7 +89,7 @@ class BaseModel(nn.Module):
             train_tensor = torch.from_numpy(image).to(self.device)
             label_tensor = torch.tensor(label).to(self.device)
 
-            _, _, _, decoded = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            decoded = self.get_decoded(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -106,7 +109,7 @@ class BaseModel(nn.Module):
             validation_tensor = torch.from_numpy(image).to(self.device)
             label_tensor = torch.tensor(label).to(self.device)
 
-            _, _, _, decoded = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            decoded = self.get_decoded(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
             decoded = decoded.view(-1, self.height, self.width)
 
             axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -126,7 +129,7 @@ class BaseModel(nn.Module):
             test_images, test_labels = batch
             test_images, test_labels = test_images.to(self.device), test_labels.to(self.device)
 
-            _, _, _, decoded = self(test_images, labels=test_labels)
+            decoded = self.get_decoded(test_images, labels=test_labels)
 
             decoded_matrices = decoded.cpu().detach().numpy()
             test_images_matrices = test_images.cpu().detach().numpy()
@@ -168,7 +171,7 @@ class BaseModel(nn.Module):
         psnr_image_tensor = torch.from_numpy(image).to(self.device)
         label_tensor = torch.tensor(label).to(self.device)
 
-        _, _, _, decoded = self(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+        decoded = self.get_decoded(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[0, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
@@ -184,7 +187,7 @@ class BaseModel(nn.Module):
         ssim_image_tensor = torch.from_numpy(image).to(self.device)
         label_tensor = torch.tensor(label).to(self.device)
 
-        _,_, _, decoded = self(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+        decoded = self.get_decoded(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
         decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
         axes[1, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
