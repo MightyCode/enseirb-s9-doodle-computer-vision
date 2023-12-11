@@ -33,8 +33,6 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
 
-        self.print_model()
-
         self.N = torch.distributions.Normal(0, 1)
     
     def print_model(self):
