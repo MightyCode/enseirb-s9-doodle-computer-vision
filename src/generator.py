@@ -12,12 +12,15 @@ class ImageGenerator():
         self.device = device
         pass
 
-    def generate_mean_encoded_vectors_per_classes(self, images_set):
+    def generate_mean_encoded_vectors_per_classes(self, images_set, conv_model=True):
         mean_encoded_vectors = []
-        mean_vectors_size = (self.model.architecture[-1],
-                            int(self.model.width/((len(self.model.architecture)-2)*2)),
-                            int(self.model.width/((len(self.model.architecture)-2)*2)))
-        
+        if conv_model:
+            mean_vectors_size = (self.model.architecture[-1],
+                    int(self.model.width/((len(self.model.architecture)-2)*2)),
+                    int(self.model.width/((len(self.model.architecture)-2)*2)))
+        else:
+            mean_vectors_size = self.model.architecture[-1]
+
         count_classes_number = [0] * self.nb_classes
 
         for i in range(self.nb_classes):
@@ -27,7 +30,7 @@ class ImageGenerator():
             images, labels = batch
             images, labels = images.to(self.device), labels.to(self.device)
 
-            encoded, _ = self.model(images)
+            encoded, _ = self.model(images, labels=labels)
             encoded_np = encoded.cpu().detach().numpy()
 
             for i in range(len(images)):
@@ -58,7 +61,10 @@ class ImageGenerator():
         
         return alternative_mean_vector
 
-    def generate_images_for_mean_vectors(self, mean_encoded_vectors):
+    """
+    Image size means that the model is not convolutional
+    """
+    def generate_images_for_mean_vectors(self, mean_encoded_vectors, image_size=None):
         generated_images = []
 
         decoder = self.model.decoder
@@ -69,12 +75,17 @@ class ImageGenerator():
 
             decoded = decoder(mean_vector_torch).squeeze()
 
-            generated_images.append(decoded.cpu().detach().numpy())
+            result = decoded.cpu().detach().numpy()
 
+            if image_size is not None:
+                generated_images.append(result.reshape(image_size[1], image_size[0]))
+            else:
+                generated_images.append(result)
+            
         return generated_images
 
-    def show_generated_images_per_mean_vectors(self, mean_encoded_vectors):
-        generated_images = self.generate_images_for_mean_vectors(mean_encoded_vectors)
+    def show_generated_images_per_mean_vectors(self, mean_encoded_vectors, image_size=None):
+        generated_images = self.generate_images_for_mean_vectors(mean_encoded_vectors, image_size=image_size)
 
         num_cols = 4
         num_rows = 2
