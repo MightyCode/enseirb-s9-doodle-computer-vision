@@ -10,7 +10,6 @@ class ImageGenerator():
         self.model = model
 
         self.device = device
-        pass
 
     def generate_mean_encoded_vectors_per_classes(self, images_set, conv_model=True):
         mean_encoded_vectors = []
@@ -30,7 +29,9 @@ class ImageGenerator():
             images, labels = batch
             images, labels = images.to(self.device), labels.to(self.device)
 
-            encoded, _ = self.model(images, labels=labels)
+            pack = self.model(images, labels=labels)
+            encoded = pack[-2]
+
             encoded_np = encoded.cpu().detach().numpy()
 
             for i in range(len(images)):

@@ -30,18 +30,34 @@ class BaseVariationalAutoencoder(BaseModel):
         KLD = - 0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
 
         # Combinaison des deux termes de perte
-        return self.rl * reproduction_loss + self.kl * KLD
+        return self.rl * reproduction_loss, self.kl * KLD
 
-    def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, optimizer,  criterion=vae_loss, num_epochs=10):
+    def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, 
+                          optimizer, criterion=vae_loss, num_epochs=10):
 
-        self.train_psnr_values = []
-        self.train_ssim_values = []
+        self.losses = {
+            'train': {
+                "reconstruction_loss": [],
+                "kl_loss": [],
+                "total_loss": []
+            },
+            'validation': {
+                "reconstruction_loss": [],
+                "kl_loss": [],
+                "total_loss": []
+            }
+        }
 
-        self.validation_psnr_values = []
-        self.validation_ssim_values = []
-
-        self.train_loss_values = []
-        self.validation_loss_values = []
+        self.metrics = {
+            'train': {
+                'psnr': [],
+                'ssim': []
+            },
+            'validation': {
+                'psnr': [],
+                'ssim': []
+            }
+        }
 
         for epoch in range(num_epochs):
             self.train()
@@ -55,14 +71,17 @@ class BaseVariationalAutoencoder(BaseModel):
                 
                 # Forward pass
                 mu, sigma, z, decoded = self.forward(inputs, labels=labels)
-                loss = criterion(mu, sigma, decoded, inputs)
+                rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
+                loss = rl_loss + kl_loss
 
                 # Backward pass
                 loss.backward()
                 optimizer.step()
 
             # Train loss
-            self.train_loss_values.append(loss.detach().cpu().item())
+            self.losses['train']['reconstruction_loss'].append(rl_loss.item())
+            self.losses['train']['kl_loss'].append(kl_loss.item())
+            self.losses['train']['total_loss'].append(loss.item())
 
             self.eval()
 
@@ -75,9 +94,12 @@ class BaseVariationalAutoencoder(BaseModel):
 
                     # Forward pass
                     mu, sigma, z, decoded = self.forward(inputs, labels=labels)
-                    loss = criterion(mu, sigma, decoded, inputs)
+                    rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
+                    loss = rl_loss + kl_loss
 
-                self.validation_loss_values.append(loss.detach().cpu().item())
+                self.losses['validation']['reconstruction_loss'].append(round(rl_loss.item(), 2))
+                self.losses['validation']['kl_loss'].append(round(kl_loss.item(), 2))
+                self.losses['validation']['total_loss'].append(round(loss.item(), 2))
 
                 # Calculate PSNR and SSIM for train and test sets
                 train_psnr = 0
@@ -95,7 +117,7 @@ class BaseVariationalAutoencoder(BaseModel):
                     _, _, _, decoded = self.forward(inputs, labels=labels)
 
                     for i in range(inputs.size(0)):
-                        nb_train_images+=1
+                        nb_train_images += 1
                         img_as_tensor = inputs[i]
                         decoded_as_tensor = decoded[i]
 
@@ -112,7 +134,7 @@ class BaseVariationalAutoencoder(BaseModel):
                     _, _, _, decoded = self.forward(inputs, labels=labels)
 
                     for i in range(inputs.size(0)):
-                        nb_valid_images+=1
+                        nb_valid_images += 1
                         img_as_tensor = inputs[i]
                         decoded_as_tensor = decoded[i]
 
@@ -127,9 +149,19 @@ class BaseVariationalAutoencoder(BaseModel):
             validation_psnr /= nb_valid_images
             validation_ssim /= nb_valid_images
 
-            self.train_psnr_values.append(train_psnr)
-            self.train_ssim_values.append(train_ssim)
-            self.validation_psnr_values.append(validation_psnr)
-            self.validation_ssim_values.append(validation_ssim)
-            print(f'Epoch [{epoch+1}/{num_epochs}]\tLoss: {self.train_loss_values[-1]:.4f}\tTest Loss {self.validation_loss_values[-1]:.4f}\t', end = "")
-            print(f'Train PSNR: {train_psnr:.4f}\tTrain SSIM: {train_ssim:.4f}\tValidation PSNR: {validation_psnr:.4f}\tValidation SSIM: {validation_ssim:.4f}')
+            self.metrics['train']['psnr'].append(round(train_psnr, 2))
+            self.metrics['train']['ssim'].append(round(train_ssim, 2))
+            self.metrics['validation']['psnr'].append(round(validation_psnr, 2))
+            self.metrics['validation']['ssim'].append(round(validation_ssim, 2))
+            
+            print(f'Ep [{epoch+1}/{num_epochs}]', end=" ")
+            print(f'T L: {self.losses["train"]["total_loss"][-1]:.4f}', end=" ")
+            print(f'T RL L: {self.losses["train"]["reconstruction_loss"][-1]:.4f}', end=" ")
+            print(f'T KL L: {self.losses["train"]["kl_loss"][-1]:.4f}', end=" ")
+            print(f'V L: {self.losses["validation"]["total_loss"][-1]:.4f}', end=" ")
+            print(f'V RL L: {self.losses["validation"]["reconstruction_loss"][-1]:.4f}', end=" ")
+            print(f'V KL L: {self.losses["validation"]["kl_loss"][-1]:.4f}', end=" ")
+            print(f'T PSNR: {self.metrics["train"]["psnr"][-1]:.4f}', end=" ")
+            print(f'T SSIM: {self.metrics["train"]["ssim"][-1]:.4f}', end=" ")
+            print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")
+            print(f'V SSIM: {self.metrics["validation"]["ssim"][-1]:.4f}')

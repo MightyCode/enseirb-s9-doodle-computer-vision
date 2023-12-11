@@ -48,20 +48,20 @@ class BaseModel(nn.Module):
     def plot_psnr_ssim(self):
         _, axes = plt.subplots(1, 3, figsize=(12, 6))
 
-        axes[0].plot(self.train_loss_values, label='Train Loss')
-        axes[0].plot(self.validation_loss_values, label='Validation Loss')
+        axes[0].plot(self.losses["train"]["total_loss"], label='Train Loss')
+        axes[0].plot(self.losses["validation"]["total_loss"], label='Validation Loss')
         axes[0].set_xlabel('Epoch')
         axes[0].set_ylabel('Loss')
         axes[0].legend()
 
-        axes[1].plot(self.train_psnr_values, label='Train PSNR')
-        axes[1].plot(self.validation_psnr_values, label='Validation PSNR')
+        axes[1].plot(self.metrics["train"]["psnr"], label='Train PSNR')
+        axes[1].plot(self.metrics["validation"]["psnr"], label='Validation PSNR')
         axes[1].set_xlabel('Epoch')
         axes[1].set_ylabel('PSNR')
         axes[1].legend()
 
-        axes[2].plot(self.train_ssim_values, label='Train SSIM')
-        axes[2].plot(self.validation_ssim_values, label='Validation SSIM')
+        axes[2].plot(self.metrics["train"]["ssim"], label='Train SSIM')
+        axes[2].plot(self.metrics["validation"]["ssim"], label='Validation SSIM')
         axes[2].set_xlabel('Epoch')
         axes[2].set_ylabel('SSIM')
         axes[2].legend()

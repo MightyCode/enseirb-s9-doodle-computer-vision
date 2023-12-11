@@ -16,14 +16,26 @@ class BaseAutoencoder(BaseModel):
         return decoded
     
     def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, criterion, optimizer, num_epochs):
-        self.train_psnr_values = []
-        self.train_ssim_values = []
 
-        self.validation_psnr_values = []
-        self.validation_ssim_values = []
+        self.losses = {
+            'train': {
+                "total_loss": []
+            },
+            'validation': {
+                "total_loss": []
+            }
+        }
 
-        self.train_loss_values = []
-        self.validation_loss_values = []
+        self.metrics = {
+            'train': {
+                'psnr': [],
+                'ssim': []
+            },
+            'validation': {
+                'psnr': [],
+                'ssim': []
+            }
+        }
 
         for epoch in range(num_epochs):
             self.train()
@@ -43,7 +55,7 @@ class BaseAutoencoder(BaseModel):
                 optimizer.step()
 
             # Train loss
-            self.train_loss_values.append(loss.item())
+            self.losses['train']['total_loss'].append(loss.item())
 
             self.eval()
             # loop on validation to compute validation loss
@@ -55,7 +67,7 @@ class BaseAutoencoder(BaseModel):
                 _, decoded = self.forward(inputs, labels=labels)
                 loss = criterion(input=decoded, target=inputs)
 
-            self.validation_loss_values.append(loss.item())
+            self.losses['validation']['total_loss'].append(loss.item())
 
             # Calculate PSNR and SSIM for train and test sets
             train_psnr = 0
@@ -105,9 +117,15 @@ class BaseAutoencoder(BaseModel):
             validation_psnr /= nb_valid_images
             validation_ssim /= nb_valid_images
 
-            self.train_psnr_values.append(train_psnr)
-            self.train_ssim_values.append(train_ssim)
-            self.validation_psnr_values.append(validation_psnr)
-            self.validation_ssim_values.append(validation_ssim)
-            print(f'Epoch [{epoch+1}/{num_epochs}]\tLoss: {self.train_loss_values[-1]:.4f}\tTest Loss {self.validation_loss_values[-1]:.4f}\t', end = "")
-            print(f'Train PSNR: {train_psnr:.4f}\tTrain SSIM: {train_ssim:.4f}\tValidation PSNR: {validation_psnr:.4f}\tValidation SSIM: {validation_ssim:.4f}')
+            self.metrics['train']['psnr'].append(train_psnr)
+            self.metrics['train']['ssim'].append(train_ssim)
+            self.metrics['validation']['psnr'].append(validation_psnr)
+            self.metrics['validation']['ssim'].append(validation_ssim)
+
+            print(f'Epoch [{epoch+1}/{num_epochs}]', end=" ")
+            print(f'T Loss: {self.losses["train"]["total_loss"][-1]:.4f}', end=" ")
+            print(f'V Loss: {self.losses["validation"]["total_loss"][-1]:.4f}', end=" ")
+            print(f'T PSNR: {self.metrics["train"]["psnr"][-1]:.4f}', end=" ")
+            print(f'T SSIM: {self.metrics["train"]["ssim"][-1]:.4f}', end=" ")
+            print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")
+            print(f'V SSIM: {self.metrics["validation"]["ssim"][-1]:.4f}')
