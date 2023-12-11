@@ -5,7 +5,7 @@ import torch.nn as nn
 
 class LinearAutoencoderEmbed(BaseAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, class_number=8):
-        super().__init__(layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, encode_class=True)
+        super().__init__(layer_sizes, device, width, height, classes, encode_class=True)
 
         for i in range(len(layer_sizes) - 1):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))

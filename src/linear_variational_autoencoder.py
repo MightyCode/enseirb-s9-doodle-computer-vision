@@ -9,8 +9,7 @@ import torch.nn as nn
 
 class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0):
-        super().__init__(layer_sizes, device, width, height, classes, 
-                dropout=0., batch_norm=True, rl=rl, kl=kl)
+        super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
 
         for i in range(len(layer_sizes) - 2):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
