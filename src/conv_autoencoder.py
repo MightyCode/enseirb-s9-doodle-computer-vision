@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class ConvAutoencoder(BaseAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
-        super().__init__(layer_sizes, device, width, height, classes, dropout=0., batch_norm=True)
+        super().__init__(layer_sizes, device, width, height, classes)
 
         kernel_size = 3
 
