@@ -60,7 +60,7 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         # encoded and embedding is tensor of same shape, add it
         z_class = z + embedding
 
-        decoded = self.decoder(z)
+        decoded = self.decoder(z_class)
         #print("decoded", decoded.max(), decoded.min())
         #print("===================")
 

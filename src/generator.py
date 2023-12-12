@@ -66,11 +66,11 @@ class ImageGenerator():
     """
     Image size means that the model is not convolutional
     """
-    def generate_images_for_mean_vectors(self, mean_encoded_vectors, image_size=None):
+    def generate_images_for_vectors(self, mean_encoded_vectors, image_size=None):
         generated_images = []
 
         decoder = self.model.decoder
-        for i in range(self.nb_classes):
+        for i in range(len(mean_encoded_vectors)):
             mean_vector = mean_encoded_vectors[i]
             double_mean_vector = np.array([mean_vector]).astype(np.float32)
             mean_vector_torch = torch.from_numpy(double_mean_vector).to(self.device)
@@ -86,8 +86,9 @@ class ImageGenerator():
             
         return generated_images
 
+
     def show_generated_images_per_mean_vectors(self, mean_encoded_vectors, image_size=None):
-        generated_images = self.generate_images_for_mean_vectors(mean_encoded_vectors, image_size=image_size)
+        generated_images = self.generate_images_for_vectors(mean_encoded_vectors, image_size=image_size)
 
         num_cols = 4
         num_rows = 2
@@ -109,8 +110,8 @@ class ImageGenerator():
         plt.show()
 
     
-    def show_generated_images_per_vector(self, vectors, labels=[], image_size=None):
-        generated_images = self.generate_images_for_mean_vectors(vectors, image_size=image_size)
+    def show_generated_images_per_vector(self, vectors, titles=[], image_size=None):
+        generated_images = self.generate_images_for_vectors(vectors, image_size=image_size)
 
         num_cols = 4 if len(vectors) >= 4 else len(vectors)
         num_rows = math.ceil(len(vectors) / num_cols)
@@ -122,8 +123,8 @@ class ImageGenerator():
             col_index = i % num_cols
             axes[row_index, col_index].imshow(generated_images[i], cmap='gray')
             axes[row_index, col_index].axis('off')
-            if len(labels) > i:
-                axes[row_index, col_index].set_title(labels[i])
+            if len(titles) > i:
+                axes[row_index, col_index].set_title(titles[i])
 
         plt.tight_layout()
         plt.suptitle('Generated images')
