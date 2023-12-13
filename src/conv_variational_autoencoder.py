@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=16, dropout=0., batch_norm=True, rl=1, kl=0):
+    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0):
         super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
 
         kernel_size = 3
@@ -21,16 +21,24 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
 
         # latent space
         self.latent_dim = latent_dim
-        self.encoded_width = int(self.width/(2*(len(layer_sizes)-2)))
-        self.encoded_height = int(self.height/(2*(len(layer_sizes)-2)))
+        self.encoded_width = self.width
+        self.encoded_height = self.height
+        for _ in range(len(layer_sizes)-2):
+            self.encoded_height//=2
+            self.encoded_width//=2
         self.encoded_num_channels = int(self.encoder[-1].out_channels)
 
         flattened_shape = int(self.encoded_height*self.encoded_width*self.encoded_num_channels)
 
-        self.flatten = nn.Flatten()
-        self.latent_space_input = nn.Linear(flattened_shape, latent_dim*2)
+        if self.latent_dim == None:
+            self.latent_dim = flattened_shape
 
-        self.latent_space_output = nn.Linear(latent_dim, flattened_shape)
+        self.flatten = nn.Flatten()
+        latent_input_dim = self.latent_dim*2
+        self.latent_space_input = nn.Linear(flattened_shape, latent_input_dim)
+
+        latent_output_dim = self.latent_dim
+        self.latent_space_output = nn.Linear(latent_output_dim, flattened_shape)
         
         # decoder layers
         for i in range(len(layer_sizes)-1, 0, -1):
@@ -47,7 +55,13 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         self.N = torch.distributions.Normal(0, 1)
     
     def print_model(self):
+        print('encoder :')
         print(self.encoder)
+        print('latent space')
+        print(self.flatten)
+        print(self.latent_space_input)
+        print(self.latent_space_output)
+        print('decoder')
         print(self.decoder)
     
     
@@ -58,12 +72,12 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         latent_space_input = self.latent_space_input(x)
         split = latent_space_input.split(self.latent_dim, dim=1)
         mu, logvar = split[0], split[1]
-        
+
         return mu, logvar
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
+        eps = torch.randn(mu.shape).to(self.device)
         return mu + eps * std
 
     def decode(self, z):

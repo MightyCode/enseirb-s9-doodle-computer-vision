@@ -6,8 +6,11 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, class_number=8):
         super().__init__(layer_sizes, device, width, height, classes, dropout, batch_norm)
 
-        self.encoded_width = int(self.width/(2*(len(layer_sizes)-2)))
-        self.encoded_height = int(self.height/(2*(len(layer_sizes)-2)))
+        self.encoded_width = self.width
+        self.encoded_height = self.height
+        for _ in range(len(layer_sizes)-2):
+            self.encoded_height//=2
+            self.encoded_width//=2
         self.encoded_num_channels = int(self.encoder[-1].out_channels)
 
         flattened_shape = int(self.encoded_height*self.encoded_width*self.encoded_num_channels)
