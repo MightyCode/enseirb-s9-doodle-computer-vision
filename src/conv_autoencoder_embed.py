@@ -18,17 +18,26 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
         self.embedding = nn.Embedding(num_embeddings=class_number, 
                                       embedding_dim=flattened_shape)
 
+
+    def get_embed(self, labels):
+        embedding = self.embedding(labels)
+        embedding = embedding.view(embedding.shape[0],
+                                   self.encoded_num_channels,
+                                   self.encoded_width,
+                                   self.encoded_height)
+        return embedding
+    
+    def add_class_to_encoded(self, encoded_before, embedding):
+        return encoded_before + embedding
+
     def forward(self, x, labels):
         x = x.view(-1, 1, self.width, self.height)
                    
         encoded = self.encoder(x)
 
-        embedding = self.embedding(labels)
-
-        embedding = embedding.view(embedding.shape[0],
-                                   self.encoded_num_channels,
-                                   self.encoded_width,
-                                   self.encoded_height)
+        embedding = self.get_embed(labels)
+        
+        encoded_class = self.add_class_to_encoded(encoded, embedding)
         
         # encoded and embedding is tensor of same shape, add it
         encoded_class = encoded + embedding

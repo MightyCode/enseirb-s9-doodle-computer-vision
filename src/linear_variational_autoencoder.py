@@ -43,9 +43,12 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         print(self.log_var)
         print(self.decoder)
     
-    def add_class_to_encoded(self, encoded_before, labels):
+    def get_embed(self, labels):
         embedding = self.embedding(labels)
 
+        return embedding
+
+    def add_class_to_encoded(self, encoded_before, embedding):
         return encoded_before + embedding
 
     def forward(self, x, labels):
@@ -61,7 +64,8 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         #print("z", z.max(), z.min())
 
         # encoded and embedding is tensor of same shape, add it
-        z_class = self.add_class(z, labels)
+        embedding = self.get_embed(labels)
+        z_class = self.add_class(z, embedding)
 
         decoded = self.decoder(z_class)
         #print("decoded", decoded.max(), decoded.min())
