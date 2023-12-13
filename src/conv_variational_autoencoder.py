@@ -13,7 +13,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         for i in range(len(layer_sizes) - 1):
             self.encoder.add_module(f"encoder_{i}", nn.Conv2d(layer_sizes[i], layer_sizes[i+1], kernel_size=kernel_size, padding=1))
             if i < len(layer_sizes) - 2:
-                self.encoder.add_module(f"encoder_relu_{i}", nn.ReLU())
+                self.encoder.add_module(f"encoder_relu_{i}", nn.ELU())
                 self.encoder.add_module(f"encoder_max_pool_{i}", nn.MaxPool2d(2, 2))
                 self.encoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
                 if batch_norm:
@@ -44,7 +44,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         for i in range(len(layer_sizes)-1, 0, -1):
             self.decoder.add_module(f"decoder_{i}", nn.Conv2d(layer_sizes[i], layer_sizes[i-1], kernel_size=kernel_size, padding=1))
             if i > 1:
-                self.decoder.add_module(f"decoder_relu_{i}", nn.ReLU())
+                self.decoder.add_module(f"decoder_relu_{i}", nn.ELU())
                 self.decoder.add_module(f"encoder_upsample_{i}", nn.Upsample(scale_factor=2, mode='nearest'))
                 self.decoder.add_module(f"encoder_dropout_{i}", nn.Dropout(dropout))
                 if batch_norm:
@@ -100,8 +100,8 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         x_reconstructed = self.decode(z)
 
         return {
-            'encoded': z, 
-            'decoded': x_reconstructed, 
+            'encoded': z.squeeze(), 
+            'decoded': x_reconstructed.squeeze(), 
             'mu': mu, 
-            'logvar': logvar
+            'sigma': logvar
         }
