@@ -7,7 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 
 from .base_model import BaseModel
 
-from .model_saver import save_checkpoint, load_checkpoint
+from utils.model_saver import save_checkpoint, load_checkpoint
 import os
 
 class BaseVariationalAutoencoder(BaseModel):
@@ -58,19 +58,27 @@ class BaseVariationalAutoencoder(BaseModel):
             }
         }
 
-        metrics_to_save = {}
         epochs_to_perform = num_epochs
+        start_epoch = 0
         
         if path and os.path.exists(path):
+            print(f'loading weights from : {path}')
+
             checkpoint = load_checkpoint(path)
+
             self.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
             epochs_to_perform = num_epochs - checkpoint['epoch']
-            num_epochs = checkpoint['epoch']
-            metrics_to_save = checkpoint['metrics']
+            original_num_epochs = num_epochs
+            start_epoch = checkpoint['epoch']
+            num_epochs = start_epoch+epochs_to_perform
+
+            self.losses = checkpoint['losses']
+            self.metrics = checkpoint['metrics']
 
         if(epochs_to_perform > 0):
-            for epoch in range(num_epochs):
+            for epoch in range(start_epoch, start_epoch+epochs_to_perform):
                 self.train()
                 # Train by batch of images
                 for data in train_loader:
@@ -100,10 +108,6 @@ class BaseVariationalAutoencoder(BaseModel):
                 self.losses['train']['kl_loss'].append(kl_loss.item())
                 self.losses['train']['total_loss'].append(loss.item())
 
-                metrics_to_save['train_RL'] = rl_loss.item()
-                metrics_to_save['train_KL'] = kl_loss.item()
-                metrics_to_save['train_loss'] = loss.item()
-
                 self.eval()
 
                 with torch.no_grad():
@@ -127,10 +131,6 @@ class BaseVariationalAutoencoder(BaseModel):
                     self.losses['validation']['reconstruction_loss'].append(round(rl_loss.item(), 2))
                     self.losses['validation']['kl_loss'].append(round(kl_loss.item(), 2))
                     self.losses['validation']['total_loss'].append(round(loss.item(), 2))
-
-                    metrics_to_save['train_RL'] = rl_loss.item()
-                    metrics_to_save['train_KL'] = kl_loss.item()
-                    metrics_to_save['train_loss'] = loss.item()
 
                     # Calculate PSNR and SSIM for train and test sets
                     train_psnr = 0
@@ -188,11 +188,6 @@ class BaseVariationalAutoencoder(BaseModel):
                 self.metrics['train']['ssim'].append(round(train_ssim, 2))
                 self.metrics['validation']['psnr'].append(round(validation_psnr, 2))
                 self.metrics['validation']['ssim'].append(round(validation_ssim, 2))
-
-                metrics_to_save['train_psnr'] = train_psnr
-                metrics_to_save['train_ssim'] = train_ssim
-                metrics_to_save['validation_psnr'] = validation_psnr
-                metrics_to_save['validation_ssim'] = validation_ssim
                 
                 print(f'Ep [{epoch+1}/{num_epochs}]', end=" ")
                 print(f'T L: {self.losses["train"]["total_loss"][-1]:.4f}', end=" ")
@@ -206,4 +201,6 @@ class BaseVariationalAutoencoder(BaseModel):
                 print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")
                 print(f'V SSIM: {self.metrics["validation"]["ssim"][-1]:.4f}')
 
-        save_checkpoint(self, num_epochs, metrics_to_save, optimizer)
+            save_checkpoint(self, num_epochs, self.metrics, self.losses, optimizer)
+        else:
+            print(f'attempting to train {original_num_epochs} epochs but {start_epoch} epochs already done -> no training performed')

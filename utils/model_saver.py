@@ -4,7 +4,7 @@ import os
 
 weights_folder = "weigths"
 
-def save_checkpoint(model, epoch, metrics, optimizer):
+def save_checkpoint(model, epoch, metrics, losses, optimizer):
 
     if not os.path.exists(weights_folder):
         os.makedirs(weights_folder)
@@ -18,6 +18,7 @@ def save_checkpoint(model, epoch, metrics, optimizer):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'metrics': metrics,
+            'losses' : losses,
             'date': current_time.strftime("%Y-%m-%d %H:%M:%S")
         }, os.path.join(weights_folder, file_name))
     
