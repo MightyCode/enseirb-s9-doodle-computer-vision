@@ -29,7 +29,7 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
     
-    def forward_full(self, x, labels):
+    def forward(self, x, labels):
         encoded = self.encoder(x)
 
         embedding = self.embedding(labels)
@@ -39,9 +39,8 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
 
         decoded = self.decoder(encoded_class)
 
-        return encoded, encoded_class, decoded
-
-    def forward(self, x, labels):
-        _, encoded_class, decoded = self.forward_full(x, labels)
-
-        return encoded_class, decoded
+        return {
+            'encoded_before': encoded, 
+            'encoded': encoded_class, 
+            'decoded': decoded
+        }

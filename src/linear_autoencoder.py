@@ -43,4 +43,7 @@ class LinearAutoencoder(BaseAutoencoder):
 
         decoded = self.decoder(encoded)
         
-        return encoded, decoded
+        return {
+            'encoded': encoded, 
+            'decoded': decoded
+        }

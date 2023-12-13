@@ -31,7 +31,7 @@ class ImageGenerator():
             images, labels = images.to(self.device), labels.to(self.device)
 
             pack = self.model(images, labels=labels)
-            encoded = pack[-2]
+            encoded = pack["encoded"]
 
             encoded_np = encoded.cpu().detach().numpy()
 

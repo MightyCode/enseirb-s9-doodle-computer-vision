@@ -43,6 +43,11 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         print(self.log_var)
         print(self.decoder)
     
+    def add_class_to_encoded(self, encoded_before, labels):
+        embedding = self.embedding(labels)
+
+        return encoded_before + embedding
+
     def forward(self, x, labels):
         encoded = self.encoder(x)
 
@@ -55,13 +60,17 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
         z = mu + sigma * torch.randn_like(sigma, device=self.device)
         #print("z", z.max(), z.min())
 
-        embedding = self.embedding(labels)
-
         # encoded and embedding is tensor of same shape, add it
-        z_class = z + embedding
+        z_class = self.add_class(z, labels)
 
         decoded = self.decoder(z_class)
         #print("decoded", decoded.max(), decoded.min())
         #print("===================")
 
-        return mu, sigma, z, z_class, decoded
+        return {
+            'encoded_before': z, 
+            'encoded': z_class, 
+            'decoded': decoded, 
+            'mu': mu, 
+            'sigma': sigma
+        }

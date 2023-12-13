@@ -47,8 +47,8 @@ class BaseAutoencoder(BaseModel):
                 optimizer.zero_grad()
                 
                 # Forward pass
-                _, decoded = self.forward(inputs, labels=labels)
-                loss = criterion(input=decoded, target=inputs)
+                pack = self.forward(inputs, labels=labels)
+                loss = criterion(input=pack["decoded"], target=inputs)
 
                 # Backward pass
                 loss.backward()
@@ -64,8 +64,8 @@ class BaseAutoencoder(BaseModel):
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 # Forward pass
-                _, decoded = self.forward(inputs, labels=labels)
-                loss = criterion(input=decoded, target=inputs)
+                pack = self.forward(inputs, labels=labels)
+                loss = criterion(input=pack["decoded"], target=inputs)
 
             self.losses['validation']['total_loss'].append(loss.item())
 
@@ -82,35 +82,37 @@ class BaseAutoencoder(BaseModel):
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs, labels=labels)
+                pack = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_train_images+=1
                     img_as_tensor = inputs[i]
-                    decoded_as_tensor = decoded[i]
+                    decoded_as_tensor = pack["decoded"][i]
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
                     decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
                     train_psnr += psnr(image_matrix, decoded_matrix)
-                    train_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
+                    train_ssim += ssim(image_matrix, decoded_matrix, 
+                                       data_range=decoded_matrix.max() - decoded_matrix.min())
 
             for data in valid_loader:
                 inputs, labels = data
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                _, decoded = self.forward(inputs, labels=labels)
+                pack = self.forward(inputs, labels=labels)
 
                 for i in range(inputs.size(0)):
                     nb_valid_images+=1
                     img_as_tensor = inputs[i]
-                    decoded_as_tensor = decoded[i]
+                    decoded_as_tensor = pack["decoded"][i]
 
                     image_matrix = img_as_tensor.cpu().detach().numpy()
                     decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
                     validation_psnr += psnr(image_matrix, decoded_matrix)
-                    validation_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
+                    validation_ssim += ssim(image_matrix, decoded_matrix, 
+                                            data_range=decoded_matrix.max() - decoded_matrix.min())
 
             train_psnr /= nb_train_images
             train_ssim /= nb_train_images

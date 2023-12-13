@@ -36,4 +36,7 @@ class ConvAutoencoder(BaseAutoencoder):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         
-        return encoded.squeeze(), decoded.squeeze()
+        return {
+            "encoded": encoded.squeeze(),
+            "decoded": decoded.squeeze()
+        }

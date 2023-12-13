@@ -76,7 +76,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         return mu, logvar
 
     def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5*logvar)
+        std = torch.exp(0.5 * logvar)
         eps = torch.randn(mu.shape).to(self.device)
         return mu + eps * std
 
@@ -98,4 +98,10 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
 
         z = self.reparameterize(mu, logvar)
         x_reconstructed = self.decode(z)
-        return mu, logvar, z, x_reconstructed.squeeze()
+
+        return {
+            'encoded': z, 
+            'decoded': x_reconstructed, 
+            'mu': mu, 
+            'logvar': logvar
+        }

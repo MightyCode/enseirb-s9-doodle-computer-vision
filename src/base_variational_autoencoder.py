@@ -18,11 +18,6 @@ class BaseVariationalAutoencoder(BaseModel):
         self.rl = rl
         self.kl = kl
 
-    def get_decoded(self, input, labels):
-        pack = self.forward(input, labels)
-
-        return pack[-1]
-
     def vae_loss(self, mean, logvar, decoded, inputs):
         # Fonction de perte de reconstruction
         reproduction_loss = F.mse_loss(decoded, inputs, reduction='sum')
@@ -73,10 +68,10 @@ class BaseVariationalAutoencoder(BaseModel):
                 # Forward pass
                 pack = self.forward(inputs, labels=labels)
 
-                mu = pack[0]
-                sigma = pack[1]
+                mu = pack["mu"]
+                sigma = pack["sigma"]
 
-                decoded = pack[-1]
+                decoded = pack["decoded"]
 
                 rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
                 loss = rl_loss + kl_loss
@@ -102,10 +97,10 @@ class BaseVariationalAutoencoder(BaseModel):
                     # Forward pass
                     pack = self.forward(inputs, labels=labels)
 
-                    mu = pack[0]
-                    sigma = pack[1]
+                    mu = pack["mu"]
+                    sigma = pack["sigma"]
 
-                    decoded = pack[-1]
+                    decoded = pack["decoded"]
 
                     rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
                     loss = rl_loss + kl_loss
@@ -129,7 +124,7 @@ class BaseVariationalAutoencoder(BaseModel):
 
                     pack = self.forward(inputs, labels=labels)
 
-                    decoded = pack[-1]
+                    decoded = pack["decoded"]
 
                     for i in range(inputs.size(0)):
                         nb_train_images += 1
@@ -148,7 +143,7 @@ class BaseVariationalAutoencoder(BaseModel):
 
                     pack = self.forward(inputs, labels=labels)
 
-                    decoded = pack[-1]
+                    decoded = pack["decoded"]
 
                     for i in range(inputs.size(0)):
                         nb_valid_images += 1

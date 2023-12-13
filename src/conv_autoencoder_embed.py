@@ -18,7 +18,9 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
         self.embedding = nn.Embedding(num_embeddings=class_number, 
                                       embedding_dim=flattened_shape)
 
-    def forward_full(self, x, labels):
+    def forward(self, x, labels):
+        x = x.view(-1, 1, self.width, self.height)
+                   
         encoded = self.encoder(x)
 
         embedding = self.embedding(labels)
@@ -33,11 +35,9 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
 
         decoded = self.decoder(encoded_class)
 
-        return encoded, encoded_class, decoded
-
-    def forward(self, x, labels):
-        x = x.view(-1, 1, self.width, self.height)
-
-        _, encoded_class, decoded = self.forward_full(x, labels)
-
-        return encoded_class.squeeze(), decoded.squeeze()
+        # return dict
+        return {
+            'encoded_before': encoded.squeeze(), 
+            'encoded': encoded_class.squeeze(), 
+            'decoded': decoded.squeeze()
+        }
