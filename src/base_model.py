@@ -21,6 +21,8 @@ class BaseModel(nn.Module):
 
         self.encode_class = encode_class
 
+        self.conv_model = False
+
     def add_class_to_encoded(self, encoded_features, labels):
         raise("Not implemented")
 

@@ -6,7 +6,8 @@ import torch.nn as nn
 class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0):
         super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
-
+        self.conv_model = False
+        
         kernel_size = 3
 
         # decoder layers

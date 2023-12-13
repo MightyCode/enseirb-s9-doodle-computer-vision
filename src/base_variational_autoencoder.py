@@ -7,7 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 
 from .base_model import BaseModel
 
-from utils.model_saver import save_checkpoint, load_checkpoint
+from utils.PytorchUtils import PytorchUtils
 import os
 
 class BaseVariationalAutoencoder(BaseModel):
@@ -64,7 +64,7 @@ class BaseVariationalAutoencoder(BaseModel):
         if path and os.path.exists(path):
             print(f'loading weights from : {path}')
 
-            checkpoint = load_checkpoint(path)
+            checkpoint = PytorchUtils.load_checkpoint(path)
 
             self.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -201,6 +201,6 @@ class BaseVariationalAutoencoder(BaseModel):
                 print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")
                 print(f'V SSIM: {self.metrics["validation"]["ssim"][-1]:.4f}')
 
-            save_checkpoint(self, num_epochs, self.metrics, self.losses, optimizer)
+            PytorchUtils.save_checkpoint(self, num_epochs, self.metrics, self.losses, optimizer)
         else:
             print(f'attempting to train {original_num_epochs} epochs but {start_epoch} epochs already done -> no training performed')

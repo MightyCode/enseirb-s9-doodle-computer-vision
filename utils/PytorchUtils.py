@@ -7,7 +7,6 @@ import numpy as np
 class PytorchUtils:
     WEIGHTS_FOLDER = "weigths"
 
-
     @staticmethod
     def tensor_to_numpy(tensor):
         return tensor.cpu().detach().numpy()
@@ -26,7 +25,7 @@ class PytorchUtils:
         if not os.path.exists(PytorchUtils.WEIGHTS_FOLDER):
             os.makedirs(PytorchUtils.WEIGHTS_FOLDER)
 
-        file_name = f'{model.__class__.__name__}_{epoch}_epochs.pt'
+        file_name = PytorchUtils.give_file_name(model, epoch)
 
         current_time = datetime.now()
 
@@ -40,6 +39,10 @@ class PytorchUtils:
             }, os.path.join(PytorchUtils.WEIGHTS_FOLDER, file_name))
         
         print(f"model saved to : {os.path.join(PytorchUtils.WEIGHTS_FOLDER, file_name)}")
+
+    @staticmethod
+    def give_file_name(model, epoch):
+        return  f'{model.__class__.__name__}_{epoch}_epochs.pt'
 
     @staticmethod
     def load_checkpoint(path):
