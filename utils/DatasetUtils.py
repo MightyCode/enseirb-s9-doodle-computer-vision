@@ -1,18 +1,22 @@
 class DatasetUtils:
     @staticmethod
     def get_n_first_for_label(dataset, label, n=1):
-        result = []
+        images = []
+        labels = []
+        indices = []
 
         index = 0
 
-        while len(result) < n and index < len(dataset):
+        while len(images) < n and index < len(dataset):
             image, image_label = dataset[index]
             if image_label == label:
-                result.append(image)
+                images.append(image)
+                labels.append(image_label)
+                indices.append(index)
 
             index += 1
 
-        return result
+        return images, labels, indices
 
     @staticmethod
     def get_n_first_random(dataset, n=1):

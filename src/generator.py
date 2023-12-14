@@ -206,7 +206,7 @@ class ImageGenerator():
             axes[row_index, col_index].imshow(images[i], cmap='gray')
             axes[row_index, col_index].axis('off')
             if titles and len(titles) > i:
-                axes[row_index, col_index].set_title(titles[i])
+                axes[row_index, col_index].set_title(titles[i], fontsize=10)
 
         plt.tight_layout()
         plt.suptitle('Generated images' if title is None else title)

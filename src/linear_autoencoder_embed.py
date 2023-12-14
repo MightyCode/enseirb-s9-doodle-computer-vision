@@ -28,6 +28,12 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
 
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
+
+    def get_embed(self, labels):
+        return self.embedding(labels)
+    
+    def add_class_to_encoded(self, encoded_before, embedding):
+        return encoded_before + embedding
     
     def forward(self, x, labels):
         encoded = self.encoder(x)
@@ -35,7 +41,7 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
         embedding = self.embedding(labels)
         
         # encoded and embedding is tensor of same shape, add it
-        encoded_class = encoded + embedding
+        encoded_class = self.add_class_to_encoded(encoded, embedding)
 
         decoded = self.decoder(encoded_class)
 
