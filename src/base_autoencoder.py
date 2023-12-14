@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader
-
+import torch
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 
@@ -79,61 +79,63 @@ class BaseAutoencoder(BaseModel):
                 self.losses['train']['total_loss'].append(loss.item())
 
                 self.eval()
-                # loop on validation to compute validation loss
-                for data in valid_loader:
-                    inputs, labels = data
-                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                with torch.no_grad():
+                    # loop on validation to compute validation loss
+                    for data in valid_loader:
+                        inputs, labels = data
+                        inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                    # Forward pass
-                    pack = self.forward(inputs, labels=labels)
-                    loss = criterion(input=pack["decoded"], target=inputs)
+                        # Forward pass
+                        pack = self.forward(inputs, labels=labels)
+                        loss = criterion(input=pack["decoded"], target=inputs)
 
-                self.losses['validation']['total_loss'].append(loss.item())
+                    self.losses['validation']['total_loss'].append(loss.item())
 
-                # Calculate PSNR and SSIM for train and test sets
-                train_psnr = 0
-                train_ssim = 0
-                validation_psnr = 0
-                validation_ssim = 0
+                    self.eval()
+                    # Calculate PSNR and SSIM for train and test sets
+                    train_psnr = 0
+                    train_ssim = 0
+                    validation_psnr = 0
+                    validation_ssim = 0
 
-                nb_train_images = 0
-                nb_valid_images = 0
+                    nb_train_images = 0
+                    nb_valid_images = 0
+       
+                    for data in train_loader:
+                        inputs, labels = data
+                        inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                for data in train_loader:
-                    inputs, labels = data
-                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                        pack = self.forward(inputs, labels=labels)
 
-                    pack = self.forward(inputs, labels=labels)
+                        for i in range(inputs.size(0)):
+                            nb_train_images+=1
+                            img_as_tensor = inputs[i]
+                            decoded_as_tensor = pack["decoded"][i]
 
-                    for i in range(inputs.size(0)):
-                        nb_train_images+=1
-                        img_as_tensor = inputs[i]
-                        decoded_as_tensor = pack["decoded"][i]
+                            image_matrix = img_as_tensor.cpu().detach().numpy()
+                            decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
-                        image_matrix = img_as_tensor.cpu().detach().numpy()
-                        decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
+                            train_psnr += psnr(image_matrix, decoded_matrix)
+                            train_ssim += ssim(image_matrix, decoded_matrix, 
+                                            data_range=decoded_matrix.max() - decoded_matrix.min())
 
-                        train_psnr += psnr(image_matrix, decoded_matrix)
-                        train_ssim += ssim(image_matrix, decoded_matrix, 
-                                        data_range=decoded_matrix.max() - decoded_matrix.min())
+                    for data in valid_loader:
+                        inputs, labels = data
+                        inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-                for data in valid_loader:
-                    inputs, labels = data
-                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+                        pack = self.forward(inputs, labels=labels)
 
-                    pack = self.forward(inputs, labels=labels)
+                        for i in range(inputs.size(0)):
+                            nb_valid_images += 1
+                            img_as_tensor = inputs[i]
+                            decoded_as_tensor = pack["decoded"][i]
 
-                    for i in range(inputs.size(0)):
-                        nb_valid_images+=1
-                        img_as_tensor = inputs[i]
-                        decoded_as_tensor = pack["decoded"][i]
+                            image_matrix = img_as_tensor.cpu().detach().numpy()
+                            decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
 
-                        image_matrix = img_as_tensor.cpu().detach().numpy()
-                        decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
-
-                        validation_psnr += psnr(image_matrix, decoded_matrix)
-                        validation_ssim += ssim(image_matrix, decoded_matrix, 
-                                                data_range=decoded_matrix.max() - decoded_matrix.min())
+                            validation_psnr += psnr(image_matrix, decoded_matrix)
+                            validation_ssim += ssim(image_matrix, decoded_matrix, 
+                                                    data_range=decoded_matrix.max() - decoded_matrix.min())
 
                 train_psnr /= nb_train_images
                 train_ssim /= nb_train_images

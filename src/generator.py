@@ -15,7 +15,6 @@ class ImageGenerator():
 
         self.device = device
 
-
     """ 
     Generate mean encoded information for each class
         information contain the mean, the var
@@ -39,83 +38,85 @@ class ImageGenerator():
                 "var": np.zeros(mean_vectors_size)
             })
 
-        for batch in images_set:
-            images, labels = batch
-            images, labels = images.to(self.device), labels.to(self.device)
+        self.model.eval()
+        with torch.no_grad():
+            for batch in images_set:
+                images, labels = batch
+                images, labels = images.to(self.device), labels.to(self.device)
 
-            pack = self.model(images, labels=labels)
-            encoded = pack["encoded"]
+                pack = self.model(images, labels=labels)
+                encoded = pack["encoded"]
 
 
-            encoded_np = encoded.cpu().detach().numpy()
+                encoded_np = encoded.cpu().detach().numpy()
 
-            for i in range(len(images)):
-                print(mean_encoded_information[labels[i]]["mean"].shape, encoded_np[i].shape, encoded_np.shape)
-                mean_encoded_information[labels[i]]["mean"] += encoded_np[i]
-                count_classes_number[labels[i]] += 1
+                for i in range(len(images)):
+                    print(mean_encoded_information[labels[i]]["mean"].shape, encoded_np[i].shape, encoded_np.shape)
+                    mean_encoded_information[labels[i]]["mean"] += encoded_np[i]
+                    count_classes_number[labels[i]] += 1
 
-                mean_encoded_information[self.nb_classes]["mean"] += encoded_np[i]
-                count_classes_number[self.nb_classes] += 1
+                    mean_encoded_information[self.nb_classes]["mean"] += encoded_np[i]
+                    count_classes_number[self.nb_classes] += 1
 
-                if "encoded_before" in pack:
-                    if not "mean_before" in mean_encoded_information[labels[i]].keys():
-                        mean_encoded_information[labels[i]]["mean_before"] = np.zeros(mean_vectors_size)
-                        mean_encoded_information[labels[i]]["var_before"] = np.zeros(mean_vectors_size)
+                    if "encoded_before" in pack:
+                        if not "mean_before" in mean_encoded_information[labels[i]].keys():
+                            mean_encoded_information[labels[i]]["mean_before"] = np.zeros(mean_vectors_size)
+                            mean_encoded_information[labels[i]]["var_before"] = np.zeros(mean_vectors_size)
 
-                    mean_encoded_information[labels[i]]["mean_before"] += pack["encoded_before"][i].cpu().detach().numpy()
+                        mean_encoded_information[labels[i]]["mean_before"] += pack["encoded_before"][i].cpu().detach().numpy()
 
-                    if not "mean_before" in mean_encoded_information[self.nb_classes].keys():
-                        mean_encoded_information[self.nb_classes]["mean_before"] = np.zeros(mean_vectors_size)
-                        mean_encoded_information[self.nb_classes]["var_before"] = np.zeros(mean_vectors_size)
+                        if not "mean_before" in mean_encoded_information[self.nb_classes].keys():
+                            mean_encoded_information[self.nb_classes]["mean_before"] = np.zeros(mean_vectors_size)
+                            mean_encoded_information[self.nb_classes]["var_before"] = np.zeros(mean_vectors_size)
+                        
+                        mean_encoded_information[self.nb_classes]["mean_before"] += pack["encoded_before"][i].cpu().detach().numpy()
+
                     
-                    mean_encoded_information[self.nb_classes]["mean_before"] += pack["encoded_before"][i].cpu().detach().numpy()
+            for i in range(self.nb_classes + 1):
+                mean_encoded_information[i]["mean"] = mean_encoded_information[i]["mean"] / count_classes_number[i]
 
-                
-        for i in range(self.nb_classes + 1):
-            mean_encoded_information[i]["mean"] = mean_encoded_information[i]["mean"] / count_classes_number[i]
+                if i < self.nb_classes:
+                    name = self.classes[i]
+                else:
+                    name = "all"
+            
+                embed_vector = "mean_before" in mean_encoded_information[i].keys()
 
-            if i < self.nb_classes:
-                name = self.classes[i]
-            else:
-                name = "all"
-           
-            embed_vector = "mean_before" in mean_encoded_information[i].keys()
-
-            print(f'Class {name} range of mean encoded {"embed" if embed_vector else ""} vector: [{mean_encoded_information[i]["mean"].min()},', end="")
-            print(f'{mean_encoded_information[i]["mean"].max()}]')
-
-            if "mean_before" in mean_encoded_information[i]:
-                mean_encoded_information[i]["mean_before"] = mean_encoded_information[i]["mean_before"] / count_classes_number[i]
-
-                print(f'Class {name} range of mean encoded vector: [{mean_encoded_information[i]["mean"].min()},', end="")
+                print(f'Class {name} range of mean encoded {"embed" if embed_vector else ""} vector: [{mean_encoded_information[i]["mean"].min()},', end="")
                 print(f'{mean_encoded_information[i]["mean"].max()}]')
 
-        # compute the var 
+                if "mean_before" in mean_encoded_information[i]:
+                    mean_encoded_information[i]["mean_before"] = mean_encoded_information[i]["mean_before"] / count_classes_number[i]
 
-        for batch in images_set:
-            images, labels = batch
-            images, labels = images.to(self.device), labels.to(self.device)
+                    print(f'Class {name} range of mean encoded vector: [{mean_encoded_information[i]["mean"].min()},', end="")
+                    print(f'{mean_encoded_information[i]["mean"].max()}]')
 
-            pack = self.model(images, labels=labels)
-            encoded = pack["encoded"]
+            # compute the var 
 
-            encoded_np = encoded.cpu().detach().numpy()
+            for batch in images_set:
+                images, labels = batch
+                images, labels = images.to(self.device), labels.to(self.device)
 
-            for i in range(len(images)):
-                mean_encoded_information[labels[i]]["var"] += np.square(encoded_np[i] - mean_encoded_information[labels[i]]["mean"])
-                mean_encoded_information[self.nb_classes]["var"] += np.square(encoded_np[i] - mean_encoded_information[self.nb_classes]["mean"])
+                pack = self.model(images, labels=labels)
+                encoded = pack["encoded"]
 
-                if "encoded_before" in pack:
-                    mean_encoded_information[labels[i]]["var_before"] += np.square(pack["encoded_before"][i].cpu().detach().numpy() - mean_encoded_information[labels[i]]["mean_before"])
-                    mean_encoded_information[self.nb_classes]["var_before"] += np.square(pack["encoded_before"][i].cpu().detach().numpy() - mean_encoded_information[self.nb_classes]["mean_before"])
+                encoded_np = encoded.cpu().detach().numpy()
 
-        for i in range(self.nb_classes + 1):
-            mean_encoded_information[i]["var"] = mean_encoded_information[i]["var"] / count_classes_number[i]
-            mean_encoded_information[i]["var"] = np.sqrt(mean_encoded_information[i]["var"])
+                for i in range(len(images)):
+                    mean_encoded_information[labels[i]]["var"] += np.square(encoded_np[i] - mean_encoded_information[labels[i]]["mean"])
+                    mean_encoded_information[self.nb_classes]["var"] += np.square(encoded_np[i] - mean_encoded_information[self.nb_classes]["mean"])
 
-            if "mean_before" in mean_encoded_information[i]:
-                mean_encoded_information[i]["var_before"] = mean_encoded_information[i]["var_before"] / count_classes_number[i]
-                mean_encoded_information[i]["var_before"] = np.sqrt(mean_encoded_information[i]["var_before"])
+                    if "encoded_before" in pack:
+                        mean_encoded_information[labels[i]]["var_before"] += np.square(pack["encoded_before"][i].cpu().detach().numpy() - mean_encoded_information[labels[i]]["mean_before"])
+                        mean_encoded_information[self.nb_classes]["var_before"] += np.square(pack["encoded_before"][i].cpu().detach().numpy() - mean_encoded_information[self.nb_classes]["mean_before"])
+
+            for i in range(self.nb_classes + 1):
+                mean_encoded_information[i]["var"] = mean_encoded_information[i]["var"] / count_classes_number[i]
+                mean_encoded_information[i]["var"] = np.sqrt(mean_encoded_information[i]["var"])
+
+                if "mean_before" in mean_encoded_information[i]:
+                    mean_encoded_information[i]["var_before"] = mean_encoded_information[i]["var_before"] / count_classes_number[i]
+                    mean_encoded_information[i]["var_before"] = np.sqrt(mean_encoded_information[i]["var_before"])
 
         return mean_encoded_information
     
@@ -139,25 +140,28 @@ class ImageGenerator():
         generated_images = []
 
         decoder = self.model.decoder
-        for i in range(len(mean_encoded_vectors)):
-            mean_vector = mean_encoded_vectors[i]
-            double_mean_vector = np.array([mean_vector]).astype(np.float32)
-            mean_vector_torch = torch.from_numpy(double_mean_vector).to(self.device)
 
-            if labels is not None:
-                label = torch.tensor(labels[i]).to(self.device).unsqueeze(0)
+        decoder.eval()
+        with torch.no_grad():
+            for i in range(len(mean_encoded_vectors)):
+                mean_vector = mean_encoded_vectors[i]
+                double_mean_vector = np.array([mean_vector]).astype(np.float32)
+                mean_vector_torch = torch.from_numpy(double_mean_vector).to(self.device)
 
-                embedding = self.model.get_embed(label).squeeze()
-                mean_vector_torch = self.model.add_class_to_encoded(mean_vector_torch, embedding)
+                if labels is not None:
+                    label = torch.tensor(labels[i]).to(self.device).unsqueeze(0)
 
-            decoded = decoder(mean_vector_torch).squeeze()
+                    embedding = self.model.get_embed(label).squeeze()
+                    mean_vector_torch = self.model.add_class_to_encoded(mean_vector_torch, embedding)
 
-            result = decoded.cpu().detach().numpy()
+                decoded = decoder(mean_vector_torch).squeeze()
 
-            if image_size is not None:
-                generated_images.append(result.reshape(image_size[1], image_size[0]))
-            else:
-                generated_images.append(result)
+                result = decoded.cpu().detach().numpy()
+
+                if image_size is not None:
+                    generated_images.append(result.reshape(image_size[1], image_size[0]))
+                else:
+                    generated_images.append(result)
             
         return generated_images
 
@@ -240,7 +244,8 @@ class ImageGenerator():
 
         print(len(interpolated_vectors))
         
-        images = self.generate_images_for_vectors(interpolated_vectors, labels=vector_labels, image_size=image_size)
+        images = self.generate_images_for_vectors(interpolated_vectors, 
+                                                  labels=vector_labels, image_size=image_size)
 
         print(images[0].shape)
 
