@@ -29,6 +29,19 @@ class ConvAutoencoder(BaseAutoencoder):
 
 
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
+
+        
+    def get_latent_dim(self):
+        self.encoded_width = self.width
+        self.encoded_height = self.height
+        for _ in range(len(self.layer_sizes)-2):
+            self.encoded_height//=2
+            self.encoded_width//=2
+        self.encoded_num_channels = self.encoder[-1].out_channels
+        return (self.encoded_num_channels, self.encoded_width, self.encoded_height)
+    
+    def decode(self, x):
+        return self.decoder(x)
     
     def forward(self, x, labels=None):
         x = x.view(-1, 1, self.width, self.height)

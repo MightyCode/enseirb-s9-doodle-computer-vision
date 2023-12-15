@@ -23,16 +23,7 @@ class ImageGenerator():
     def generate_mean_encoded_information(self, images_set):
         mean_encoded_information = []
 
-        if self.model.latent_type == "convolutional":
-            mean_vectors_size = (self.model.architecture[-1],
-                    int(self.model.width/((len(self.model.architecture)-2)*2)),
-                    int(self.model.width/((len(self.model.architecture)-2)*2)))
-        elif self.model.latent_type == "vector":
-            mean_vectors_size = self.model.architecture[-1]
-        elif self.model.latent_type == "convolutional-variational":
-            mean_vectors_size = self.model.latent_dim
-        else:
-            raise("Latent type not supported")
+        mean_vectors_size = self.model.get_latent_dim()
 
         count_classes_number = [0] * (self.nb_classes + 1)
 
@@ -157,10 +148,9 @@ class ImageGenerator():
                     embedding = self.model.get_embed(label).squeeze()
                     mean_vector_torch = self.model.add_class_to_encoded(mean_vector_torch, embedding)
 
-                if self.model.latent_type == "convolutional-variational":
-                    decoded = self.model.decode(mean_vector_torch).squeeze()
-                else:
-                    decoded = decoder(mean_vector_torch).squeeze()
+                #print(mean_vector_torch.shape)
+
+                decoded = self.model.decode(mean_vector_torch).squeeze()
 
                 result = decoded.cpu().detach().numpy()
 
@@ -247,13 +237,10 @@ class ImageGenerator():
 
                 if labels is not None:
                     vector_labels.append(label)
-
-        print(len(interpolated_vectors))
         
         images = self.generate_images_for_vectors(interpolated_vectors, 
                                                   labels=vector_labels, image_size=image_size)
 
-        print(images[0].shape)
 
         if save_path is not None:
             # check if path exist

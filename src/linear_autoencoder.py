@@ -7,6 +7,8 @@ class LinearAutoencoder(BaseAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, encode_class=False):
         super().__init__(layer_sizes, device, width, height, classes, encode_class=encode_class)
 
+        self.layer_sizes = layer_sizes
+
         for i in range(len(layer_sizes) - 1):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
             if i < len(layer_sizes) - 2:
@@ -32,6 +34,12 @@ class LinearAutoencoder(BaseAutoencoder):
         
     def add_class_to_encoded(self, encoded_features, labels):
         return torch.cat((encoded_features, labels.unsqueeze(1)), dim=1)
+    
+    def get_latent_dim(self):
+        return self.layer_sizes[-1]
+    
+    def decode(self, x):
+        return self.decoder(x)
     
     def forward(self, x, labels=None):
         encoded = self.encoder(x)

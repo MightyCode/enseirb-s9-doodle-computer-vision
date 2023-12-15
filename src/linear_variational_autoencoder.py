@@ -11,6 +11,8 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0):
         super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
 
+        self.layer_sizes = layer_sizes
+
         for i in range(len(layer_sizes) - 2):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
             if i < len(layer_sizes) - 2:
@@ -50,6 +52,12 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
 
     def add_class_to_encoded(self, encoded_before, embedding):
         return encoded_before + embedding
+    
+    def get_latent_dim(self):
+        return self.layer_sizes[-1]
+    
+    def decode(self, x):
+        return self.decoder(x)
 
     def forward(self, x, labels):
         encoded = self.encoder(x)

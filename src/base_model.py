@@ -19,6 +19,8 @@ class BaseModel(nn.Module):
         self.height = height
         self.classes = classes
 
+        self.layer_sizes = layer_sizes
+
         self.encode_class = encode_class
 
         self.latent_type = "vector"

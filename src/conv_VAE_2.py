@@ -3,10 +3,13 @@ from .base_variational_autoencoder import BaseVariationalAutoencoder
 import torch
 import torch.nn as nn
 
-class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0):
+class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
+    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0, latent_channels=64):
         super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
-        self.latent_type = "convolutional-variational"
+        self.latent_type = "convolutional"
+
+        self.layer_sizes = layer_sizes
+        self.latent_channels = latent_channels
         
         kernel_size = 3
 
@@ -21,25 +24,10 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
                     self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm2d(layer_sizes[i+1]))
 
         # latent space
-        self.latent_dim = latent_dim
-        self.encoded_width = self.width
-        self.encoded_height = self.height
-        for _ in range(len(layer_sizes)-2):
-            self.encoded_height//=2
-            self.encoded_width//=2
-        self.encoded_num_channels = int(self.encoder[-1].out_channels)
+        self.mu = nn.Conv2d(layer_sizes[-1], latent_channels, kernel_size=kernel_size, padding=1)
+        self.logvar = nn.Conv2d(layer_sizes[-1], latent_channels, kernel_size=kernel_size, padding=1)
 
-        flattened_shape = int(self.encoded_height*self.encoded_width*self.encoded_num_channels)
-
-        if self.latent_dim == None:
-            self.latent_dim = flattened_shape
-
-        self.flatten = nn.Flatten()
-        latent_input_dim = self.latent_dim*2
-        self.latent_space_input = nn.Linear(flattened_shape, latent_input_dim)
-
-        latent_output_dim = self.latent_dim
-        self.latent_space_output = nn.Linear(latent_output_dim, flattened_shape)
+        self.latent_space_output = nn.Conv2d(latent_channels, layer_sizes[-1], kernel_size=kernel_size, padding=1)
         
         # decoder layers
         for i in range(len(layer_sizes)-1, 0, -1):
@@ -59,8 +47,8 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         print('encoder :')
         print(self.encoder)
         print('latent space')
-        print(self.flatten)
-        print(self.latent_space_input)
+        print(self.mu)
+        print(self.logvar)
         print(self.latent_space_output)
         print('decoder')
         print(self.decoder)
@@ -68,11 +56,9 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
     
     def encode(self, x, labels=None):
         x = self.encoder(x)
-        x = self.flatten(x)
 
-        latent_space_input = self.latent_space_input(x)
-        split = latent_space_input.split(self.latent_dim, dim=1)
-        mu, logvar = split[0], split[1]
+        mu = self.mu(x)
+        logvar = self.logvar(x)
 
         return mu, logvar
 
@@ -83,18 +69,19 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
 
     def decode(self, z):
         latent_space_output = self.latent_space_output(z)
-
-        latent_space_output_reshaped = latent_space_output.view(latent_space_output.shape[0],
-                                   self.encoded_num_channels,
-                                   self.encoded_width,
-                                   self.encoded_height)
         
-        z = self.decoder(latent_space_output_reshaped)
+        z = self.decoder(latent_space_output)
         return z
-
-    def get_latent_dim(self):
-        return self.latent_dim
     
+    def get_latent_dim(self):
+        self.encoded_width = self.width
+        self.encoded_height = self.height
+        for _ in range(len(self.layer_sizes)-2):
+            self.encoded_height//=2
+            self.encoded_width//=2
+        self.encoded_num_channels = self.latent_channels
+        return (self.encoded_num_channels, self.encoded_width, self.encoded_height)
+
     def forward(self, x, labels=None):
         x = x.view(-1, 1, self.width, self.height)
 
