@@ -30,7 +30,7 @@ class ImageGenerator():
         elif self.model.latent_type == "vector":
             mean_vectors_size = self.model.architecture[-1]
         elif self.model.latent_type == "convolutional-variational":
-            mean_vectors_size = self.model.lantent_dim
+            mean_vectors_size = self.model.latent_dim
         else:
             raise("Latent type not supported")
 
@@ -55,7 +55,6 @@ class ImageGenerator():
                 encoded_np = encoded.cpu().detach().numpy()
 
                 for i in range(len(images)):
-                    print(mean_encoded_information[labels[i]]["mean"].shape, encoded_np[i].shape, encoded_np.shape)
                     mean_encoded_information[labels[i]]["mean"] += encoded_np[i]
                     count_classes_number[labels[i]] += 1
 
@@ -158,7 +157,10 @@ class ImageGenerator():
                     embedding = self.model.get_embed(label).squeeze()
                     mean_vector_torch = self.model.add_class_to_encoded(mean_vector_torch, embedding)
 
-                decoded = decoder(mean_vector_torch).squeeze()
+                if self.model.latent_type == "convolutional-variational":
+                    decoded = self.model.decode(mean_vector_torch).squeeze()
+                else:
+                    decoded = decoder(mean_vector_torch).squeeze()
 
                 result = decoded.cpu().detach().numpy()
 

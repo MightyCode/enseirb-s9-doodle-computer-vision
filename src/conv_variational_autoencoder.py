@@ -66,7 +66,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         print(self.decoder)
     
     
-    def encode(self, x):
+    def encode(self, x, labels=None):
         x = self.encoder(x)
         x = self.flatten(x)
 
