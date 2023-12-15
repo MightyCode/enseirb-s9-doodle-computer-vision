@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0, latent_channels=64):
+    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0, latent_channels=64, class_number=8):
         super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
         self.latent_type = "convolutional"
 
@@ -42,15 +42,20 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
         self.decoder.add_module("decoder_sigmoid", nn.Sigmoid())
 
         self.N = torch.distributions.Normal(0, 1)
+
+        self.latent_dim = self.get_latent_dim()
+        embedding_dim = int(self.latent_dim[0] * self.latent_dim[1] * self.latent_dim[2])
+        self.embedding = nn.Embedding(num_embeddings=class_number, 
+                                      embedding_dim=embedding_dim)
     
     def print_model(self):
         print('encoder :')
         print(self.encoder)
         print('latent space')
-        print(self.mu)
-        print(self.logvar)
-        print(self.latent_space_output)
-        print('decoder')
+        print(f'mu : {self.mu}')
+        print(f'logvar : {self.logvar}')
+        print(f'latent_exit : {self.latent_space_output}')
+        print('decoder :')
         print(self.decoder)
     
     
@@ -81,6 +86,19 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
             self.encoded_width//=2
         self.encoded_num_channels = self.latent_channels
         return (self.encoded_num_channels, self.encoded_width, self.encoded_height)
+    
+    def get_embed(self, labels):
+        embedding = self.embedding(labels)
+        embedding = embedding.reshape(
+            embedding.shape[0],
+            self.latent_dim[0],
+            self.latent_dim[1],
+            self.latent_dim[2]
+        )
+        return embedding
+    
+    def add_class_to_encoded(self, encoded_before, embedding):
+        return encoded_before + embedding
 
     def forward(self, x, labels=None):
         x = x.view(-1, 1, self.width, self.height)
@@ -88,10 +106,16 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
         mu, logvar = self.encode(x)
 
         z = self.reparameterize(mu, logvar)
-        x_reconstructed = self.decode(z)
+
+        embedding = self.get_embed(labels)
+
+        encoded_class = self.add_class_to_encoded(z, embedding)
+        
+        x_reconstructed = self.decode(encoded_class)
 
         return {
-            'encoded': z.squeeze(), 
+            'encoded_before': z.squeeze(), 
+            'encoded': encoded_class,
             'decoded': x_reconstructed.squeeze(), 
             'mu': mu, 
             'sigma': logvar
