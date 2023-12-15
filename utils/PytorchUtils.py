@@ -25,6 +25,8 @@ class PytorchUtils:
         if not os.path.exists(PytorchUtils.WEIGHTS_FOLDER):
             os.makedirs(PytorchUtils.WEIGHTS_FOLDER)
 
+        PytorchUtils.save_info(model, epoch, metrics, losses, optimizer)
+
         file_name = PytorchUtils.give_file_name(model, epoch)
 
         current_time = datetime.now()
@@ -41,8 +43,24 @@ class PytorchUtils:
         print(f"model saved to : {os.path.join(PytorchUtils.WEIGHTS_FOLDER, file_name)}")
 
     @staticmethod
+    def save_info(model, epoch, metrics, losses, optimizer):
+        file_name = PytorchUtils.give_file_name(model, epoch) + ".txt"
+        if not os.path.exists(PytorchUtils.WEIGHTS_FOLDER):
+            os.makedirs(PytorchUtils.WEIGHTS_FOLDER)
+
+        with open(os.path.join(PytorchUtils.WEIGHTS_FOLDER, file_name), "w") as f:
+            f.write(f"epoch: {epoch}\n")
+            f.write(f"metrics: {str(metrics)}\n")
+            f.write(f"losses: {losses}\n")
+            f.write(f"optimizer: {str(optimizer)}\n")
+            f.write(f"model: {model}\n")
+            f.write(f"date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        
+        print(f"model saved to : {os.path.join(PytorchUtils.WEIGHTS_FOLDER, file_name)}")
+
+    @staticmethod
     def give_file_name(model, epoch):
-        return  f'{model.__class__.__name__}_{epoch}_epochs.pt'
+        return  f'{model.__class__.__name__}_{model.width}x{model.height}_{epoch}_epochs.pt'
 
     @staticmethod
     def load_checkpoint(path):
