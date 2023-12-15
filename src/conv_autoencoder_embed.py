@@ -39,9 +39,6 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
         embedding = self.get_embed(labels)
         
         encoded_class = self.add_class_to_encoded(encoded, embedding)
-        
-        # encoded and embedding is tensor of same shape, add it
-        encoded_class = encoded + embedding
 
         decoded = self.decoder(encoded_class)
 
