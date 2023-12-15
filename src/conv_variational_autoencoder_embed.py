@@ -29,7 +29,8 @@ class ConvVariationalAutoencoderEmbed(ConvVariationalAutoencoder):
         x_reconstructed = self.decode(encoded_class)
 
         return {
-            'encoded': z.squeeze(), 
+            'encoded_before': z.squeeze(), 
+            'encoded': encoded_class.squeeze(),
             'decoded': x_reconstructed.squeeze(), 
             'mu': mu, 
             'sigma': logvar
