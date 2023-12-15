@@ -23,12 +23,16 @@ class ImageGenerator():
     def generate_mean_encoded_information(self, images_set):
         mean_encoded_information = []
 
-        if self.model.conv_model:
+        if self.model.latent_type == "convolutional":
             mean_vectors_size = (self.model.architecture[-1],
                     int(self.model.width/((len(self.model.architecture)-2)*2)),
                     int(self.model.width/((len(self.model.architecture)-2)*2)))
-        else:
+        elif self.model.latent_type == "vector":
             mean_vectors_size = self.model.architecture[-1]
+        elif self.model.latent_type == "convolutional-variational":
+            mean_vectors_size = self.model.lantent_dim
+        else:
+            raise("Latent type not supported")
 
         count_classes_number = [0] * (self.nb_classes + 1)
 

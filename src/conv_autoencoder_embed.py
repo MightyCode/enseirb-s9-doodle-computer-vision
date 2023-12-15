@@ -5,7 +5,7 @@ import torch.nn as nn
 class ConvAutoencoderEmbed(ConvAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, class_number=8):
         super().__init__(layer_sizes, device, width, height, classes, dropout, batch_norm)
-        self.conv_model = True
+        self.latent_type = "convolutional"
 
         self.encoded_width = self.width
         self.encoded_height = self.height

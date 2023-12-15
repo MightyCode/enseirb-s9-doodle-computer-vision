@@ -21,7 +21,7 @@ class BaseModel(nn.Module):
 
         self.encode_class = encode_class
 
-        self.conv_model = False
+        self.latent_type = "vector"
 
     def add_class_to_encoded(self, encoded_features, labels):
         raise("Not implemented")

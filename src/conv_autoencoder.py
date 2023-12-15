@@ -5,7 +5,7 @@ import torch.nn as nn
 class ConvAutoencoder(BaseAutoencoder):
     def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
         super().__init__(layer_sizes, device, width, height, classes)
-        self.conv_model = True
+        self.latent_type = "convolutional"
         kernel_size = 3
 
         for i in range(len(layer_sizes) - 1):
