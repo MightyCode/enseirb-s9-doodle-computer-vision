@@ -41,6 +41,7 @@ class BaseAutoencoder(BaseModel):
         epochs_to_perform = num_epochs
         start_epoch = 0
         
+        print(f"Attempting to load weights from : {path}")
         if path and os.path.exists(path):
             print(f'loading weights from : {path}')
 

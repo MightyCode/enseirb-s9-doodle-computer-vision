@@ -46,7 +46,7 @@ class BaseModel(nn.Module):
         print(self.encoder)
         print(self.decoder)
 
-    def plot_psnr_ssim(self):
+    def plot_psnr_ssim(self, path=None):
         _, axes = plt.subplots(1, 3, figsize=(12, 6))
 
         axes[0].plot(self.losses["train"]["total_loss"], label='Train Loss')
@@ -68,7 +68,12 @@ class BaseModel(nn.Module):
         axes[2].legend()
 
         plt.tight_layout()
-        plt.show()
+
+        if path:
+            plt.savefig(path)
+            plt.clf()
+        else:
+            plt.show()
 
     def show_images(self, train_set, validation_set):
         # show original and reconstructed images
