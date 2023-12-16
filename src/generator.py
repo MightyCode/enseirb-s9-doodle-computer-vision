@@ -140,7 +140,7 @@ class ImageGenerator():
             for i in range(len(mean_encoded_vectors)):
                 mean_vector = mean_encoded_vectors[i]
                 double_mean_vector = np.array([mean_vector]).astype(np.float32)
-                mean_vector_torch = torch.from_numpy(double_mean_vector).to(self.device)
+                mean_vector_torch = torch.from_numpy(double_mean_vector).to(self.device).squeeze()
 
                 if labels is not None:
                     label = torch.tensor(labels[i]).to(self.device).unsqueeze(0)
@@ -148,9 +148,7 @@ class ImageGenerator():
                     embedding = self.model.get_embed(label).squeeze()
                     mean_vector_torch = self.model.add_class_to_encoded(mean_vector_torch, embedding)
 
-                #print(mean_vector_torch.shape)
-
-                decoded = self.model.decode(mean_vector_torch).squeeze()
+                decoded = self.model.decode(mean_vector_torch.unsqueeze(0)).squeeze()
 
                 result = decoded.cpu().detach().numpy()
 
