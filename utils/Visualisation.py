@@ -37,7 +37,7 @@ class Visualisation:
         plt.tight_layout()
 
     @staticmethod
-    def latent_space_visualization(model, valid_loader, use_embedding=False):
+    def latent_space_visualization(model, valid_loader, use_embedding=False, path=None):
         model.eval()
         pca = PCA(n_components=2)
 
@@ -76,7 +76,12 @@ class Visualisation:
 
         plt.legend(*scatter.legend_elements(), loc="lower right", title="Classes")
         plt.title("Latent space visualization " + ("using embedding" if use_embedding else ""))
-        plt.show()
+
+        if path:
+            plt.savefig(path)
+            plt.clf()
+        else:
+            plt.show()
 
     @staticmethod
     def dataset_distribution(classes, dataset):

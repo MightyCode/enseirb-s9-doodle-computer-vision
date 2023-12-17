@@ -75,7 +75,7 @@ class BaseModel(nn.Module):
         else:
             plt.show()
 
-    def show_images(self, train_set, validation_set):
+    def show_images(self, train_set, other_set, train_set_name="Train", other_set_name="Test", path=None):
         # show original and reconstructed images
         num_cols = 4
         num_rows = 2
@@ -87,45 +87,51 @@ class BaseModel(nn.Module):
             index = random.randint(0, train_set.__len__() - 1)
 
             axes[0, i].imshow(train_set.get_image_2d(index), cmap='gray')
-            axes[0, i].set_title(f"Train original {self.classes[train_set[index][1]]}")
+            axes[0, i].set_title(f"{train_set_name} ori. {self.classes[train_set[index][1]]}")
             axes[0, i].axis('off')
 
             # Reconstructed images
-            image, label = train_set[index]
-            train_tensor = torch.from_numpy(image).to(self.device)
-            label_tensor = torch.tensor(label).to(self.device)
+            with torch.no_grad():
+                image, label = train_set[index]
+                train_tensor = torch.from_numpy(image).to(self.device)
+                label_tensor = torch.tensor(label).to(self.device)
 
-            pack = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
-            
-            decoded = pack["decoded"]
-            decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
+                pack = self.forward(train_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+                
+                decoded = pack["decoded"]
+                decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
-            axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
-            axes[1, i].set_title(f"Train reconstructed {self.classes[train_set[index][1]]}")
-            axes[1, i].axis('off')
+                axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
+                axes[1, i].set_title(f"{other_set_name} recon. {self.classes[train_set[index][1]]}")
+                axes[1, i].axis('off')
         
         for i in range(num_cols // 2, num_cols):
             # Test images
-            index = random.randint(0, validation_set.__len__() - 1)
+            index = random.randint(0, other_set.__len__() - 1)
 
-            axes[0, i].imshow(validation_set.get_image_2d(index), cmap='gray')
-            axes[0, i].set_title(f"Validation original, {self.classes[validation_set[index][1]]}")
+            axes[0, i].imshow(other_set.get_image_2d(index), cmap='gray')
+            axes[0, i].set_title(f"Validation ori., {self.classes[other_set[index][1]]}")
             axes[0, i].axis('off')
 
             # Reconstructed images
-            image, label = validation_set[index]
-            validation_tensor = torch.from_numpy(image).to(self.device)
-            label_tensor = torch.tensor(label).to(self.device)
+            with torch.no_grad():
+                image, label = other_set[index]
+                validation_tensor = torch.from_numpy(image).to(self.device)
+                label_tensor = torch.tensor(label).to(self.device)
 
-            pack = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
-            decoded = pack["decoded"]
-            decoded = decoded.view(-1, self.height, self.width)
+                pack = self.forward(validation_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+                decoded = pack["decoded"]
+                decoded = decoded.view(-1, self.height, self.width)
 
-            axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
-            axes[1, i].set_title(f"Validation reconstructed {self.classes[validation_set[index][1]]}")
-            axes[1, i].axis('off')
+                axes[1, i].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
+                axes[1, i].set_title(f"Validation recon. {self.classes[other_set[index][1]]}")
+                axes[1, i].axis('off')
 
-        plt.show()
+        if path:
+            plt.savefig(path)
+            plt.clf()
+        else:
+            plt.show()
 
     def return_lowest_image_index_psnr_ssim(self, dataset):
         # Show the lowest psnr then ssim in the test set
@@ -138,27 +144,28 @@ class BaseModel(nn.Module):
             test_images, test_labels = batch
             test_images, test_labels = test_images.to(self.device), test_labels.to(self.device)
 
-            pack = self.forward(test_images, labels=test_labels)
-            decoded = pack["decoded"]
+            with torch.no_grad():
+                pack = self.forward(test_images, labels=test_labels)
+                decoded = pack["decoded"]
 
-            decoded_matrices = decoded.cpu().detach().numpy()
-            test_images_matrices = test_images.cpu().detach().numpy()
+                decoded_matrices = decoded.cpu().detach().numpy()
+                test_images_matrices = test_images.cpu().detach().numpy()
 
-            for i in range(test_images.size(0)):
-                image_matrix = test_images_matrices[i]
-                decoded_matrix = decoded_matrices[i]
+                for i in range(test_images.size(0)):
+                    image_matrix = test_images_matrices[i]
+                    decoded_matrix = decoded_matrices[i]
 
-                psnr_value = psnr(image_matrix, decoded_matrix)
-                ssim_value = ssim(image_matrix, decoded_matrix,
-                                   data_range=decoded_matrix.max() - decoded_matrix.min())
-                
-                if psnr_value < lowest_psnr:
-                    lowest_psnr = psnr_value
-                    lowest_psnr_index = i
+                    psnr_value = psnr(image_matrix, decoded_matrix)
+                    ssim_value = ssim(image_matrix, decoded_matrix,
+                                    data_range=decoded_matrix.max() - decoded_matrix.min())
+                    
+                    if psnr_value < lowest_psnr:
+                        lowest_psnr = psnr_value
+                        lowest_psnr_index = i
 
-                if ssim_value < lowest_ssim:
-                    lowest_ssim = ssim_value
-                    lowest_ssim_index = i
+                    if ssim_value < lowest_ssim:
+                        lowest_ssim = ssim_value
+                        lowest_ssim_index = i
 
         return [lowest_psnr_index, lowest_psnr], [lowest_ssim_index, lowest_ssim]
     
@@ -173,38 +180,40 @@ class BaseModel(nn.Module):
 
         _, axes = plt.subplots(2, 2, figsize=(7, 6))
 
-        # PSNR image
-        axes[0, 0].imshow(image_set.get_image_2d(lowest_psnr_index), cmap='gray')
-        axes[0, 0].set_title("Original : " + psnr_image_label)
-        axes[0, 0].axis('off')
+        with torch.no_grad():
+            # PSNR image
+            axes[0, 0].imshow(image_set.get_image_2d(lowest_psnr_index), cmap='gray')
+            axes[0, 0].set_title("Original : " + psnr_image_label)
+            axes[0, 0].axis('off')
 
-        image, label = image_set[lowest_psnr_index]
-        psnr_image_tensor = torch.from_numpy(image).to(self.device)
-        label_tensor = torch.tensor(label).to(self.device)
 
-        pack = self.forward(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
-        decoded = pack["decoded"]
-        decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
+            image, label = image_set[lowest_psnr_index]
+            psnr_image_tensor = torch.from_numpy(image).to(self.device)
+            label_tensor = torch.tensor(label).to(self.device)
 
-        axes[0, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
-        axes[0, 1].set_title(f"Reconstructed : {psnr_image_label}, PSNR: {psnr:.4f}")
-        axes[0, 1].axis('off')
+            pack = self.forward(psnr_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            decoded = pack["decoded"]
+            decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
-        # SSIM image
-        axes[1, 0].imshow(image_set.get_image_2d(lowest_ssim_index), cmap='gray')
-        axes[1, 0].set_title("Original : " + ssim_image_label)
-        axes[1, 0].axis('off')
+            axes[0, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
+            axes[0, 1].set_title(f"Reconstructed : {psnr_image_label}, PSNR: {psnr:.4f}")
+            axes[0, 1].axis('off')
 
-        image, label = image_set[lowest_ssim_index]
-        ssim_image_tensor = torch.from_numpy(image).to(self.device)
-        label_tensor = torch.tensor(label).to(self.device)
+            # SSIM image
+            axes[1, 0].imshow(image_set.get_image_2d(lowest_ssim_index), cmap='gray')
+            axes[1, 0].set_title("Original : " + ssim_image_label)
+            axes[1, 0].axis('off')
 
-        pack = self.forward(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
-        decoded = pack["decoded"]
-        decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
+            image, label = image_set[lowest_ssim_index]
+            ssim_image_tensor = torch.from_numpy(image).to(self.device)
+            label_tensor = torch.tensor(label).to(self.device)
 
-        axes[1, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
-        axes[1, 1].set_title(f"Reconstructed : {ssim_image_label}, SSIM: {ssim:.4f}")
-        axes[1, 1].axis('off')
+            pack = self.forward(ssim_image_tensor.unsqueeze(0), labels=label_tensor.unsqueeze(0))
+            decoded = pack["decoded"]
+            decoded = decoded.view(-1, self.height, self.width)  # Reshape decoded images
 
-        plt.show()
+            axes[1, 1].imshow(decoded.cpu().detach().numpy()[0], cmap='gray')
+            axes[1, 1].set_title(f"Reconstructed : {ssim_image_label}, SSIM: {ssim:.4f}")
+            axes[1, 1].axis('off')
+
+            plt.show()

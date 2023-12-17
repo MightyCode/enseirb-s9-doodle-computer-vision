@@ -32,7 +32,6 @@ class DataManagerNpz():
 
         return training_data, training_labels, validation_data, validation_labels, test_data, test_labels
 
-
     def shuffle_dataset(self, data : list, labels: list):
         """
         shuffles data and labels according to the same permutation

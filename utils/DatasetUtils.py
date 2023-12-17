@@ -1,11 +1,11 @@
 class DatasetUtils:
     @staticmethod
-    def get_n_first_for_label(dataset, label, n=1):
+    def get_n_first_for_label(dataset, label, n=1, start_index=0):
         images = []
         labels = []
         indices = []
 
-        index = 0
+        index = start_index
 
         while len(images) < n and index < len(dataset):
             image, image_label = dataset[index]
@@ -19,5 +19,5 @@ class DatasetUtils:
         return images, labels, indices
 
     @staticmethod
-    def get_n_first_random(dataset, n=1):
-        return DatasetUtils.get_n_first_for_label(dataset, dataset[0][1], n)
+    def get_n_first_random(dataset, n=1, start_index=0):
+        return DatasetUtils.get_n_first_for_label(dataset, dataset[0][1], n, start_index)

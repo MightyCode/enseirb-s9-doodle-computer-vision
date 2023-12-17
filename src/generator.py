@@ -20,7 +20,7 @@ class ImageGenerator():
         information contain the mean, the var
     Add one additional information for all classes
     """
-    def generate_mean_encoded_information(self, images_set):
+    def generate_mean_encoded_information(self, images_set, verbose=True):
         mean_encoded_information = []
 
         mean_vectors_size = self.model.get_latent_dim()
@@ -76,14 +76,16 @@ class ImageGenerator():
             
                 embed_vector = "mean_before" in mean_encoded_information[i].keys()
 
-                print(f'Class {name} range of mean encoded {"embed" if embed_vector else ""} vector: [{mean_encoded_information[i]["mean"].min()},', end="")
-                print(f'{mean_encoded_information[i]["mean"].max()}]')
+                if verbose:
+                    print(f'Class {name} range of mean encoded {"embed" if embed_vector else ""} vector: [{mean_encoded_information[i]["mean"].min()},', end="")
+                    print(f'{mean_encoded_information[i]["mean"].max()}]')
 
                 if "mean_before" in mean_encoded_information[i]:
                     mean_encoded_information[i]["mean_before"] = mean_encoded_information[i]["mean_before"] / count_classes_number[i]
 
-                    print(f'Class {name} range of mean encoded vector: [{mean_encoded_information[i]["mean"].min()},', end="")
-                    print(f'{mean_encoded_information[i]["mean"].max()}]')
+                    if verbose:
+                        print(f'Class {name} range of mean encoded vector: [{mean_encoded_information[i]["mean"].min()},', end="")
+                        print(f'{mean_encoded_information[i]["mean"].max()}]')
 
             # compute the var 
 
@@ -160,7 +162,7 @@ class ImageGenerator():
         return generated_images
 
 
-    def show_generated_images_per_mean_vectors(self, mean_encoded_vectors, labels=None, image_size=None, title=None):
+    def show_generated_images_per_mean_vectors(self, mean_encoded_vectors, labels=None, image_size=None, title=None, path=None):
         generated_images = self.generate_images_for_vectors(mean_encoded_vectors, labels=labels, image_size=image_size)
 
         num_cols = 4 if len(mean_encoded_vectors) >= 4 else len(mean_encoded_vectors)
@@ -180,15 +182,19 @@ class ImageGenerator():
 
         plt.subplots_adjust(top=0.9)
 
-        plt.show()
+        if path is not None:
+            plt.savefig(path)
+            plt.clf()
+        else:
+            plt.show()
 
     
-    def show_generated_images_per_vector(self, vectors, labels=None, titles=None, image_size=None, title=None):
+    def show_generated_images_per_vector(self, vectors, labels=None, titles=None, image_size=None, title=None, path=None):
         generated_images = self.generate_images_for_vectors(vectors, labels=labels, image_size=image_size)
 
-        self.show_generated_images(generated_images, titles=titles, title=title)
+        self.show_generated_images(generated_images, titles=titles, title=title, path=path)
 
-    def show_generated_images(self, images, titles=None, title=None):
+    def show_generated_images(self, images, titles=None, title=None, path=None):
         num_cols = 4 if len(images) >= 4 else len(images)
         num_rows = math.ceil(len(images) / num_cols)
 
@@ -207,8 +213,11 @@ class ImageGenerator():
 
         plt.subplots_adjust(top=0.9)
 
-        plt.show()
-
+        if path is not None:
+            plt.savefig(path)
+            plt.clf()
+        else:
+            plt.show()
 
 
     """

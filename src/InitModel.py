@@ -71,6 +71,7 @@ class InitModel:
         return criterion, optimizer
 
     def print_model_characteristics(autoencoder_model):
+        print("Class : ", autoencoder_model.__class__.__name__)
         # Print architecture 
         autoencoder_model.print_model()
 

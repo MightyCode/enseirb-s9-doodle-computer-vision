@@ -5,7 +5,7 @@ import numpy as np
 
 
 class PytorchUtils:
-    WEIGHTS_FOLDER = "weigths"
+    WEIGHTS_FOLDER = "weights"
 
     @staticmethod
     def tensor_to_numpy(tensor):
@@ -69,8 +69,8 @@ class PytorchUtils:
         return checkpoint
 
     @staticmethod
-    def device_section():
-        if torch.cuda.is_available():
+    def device_section(force_cpu=False):
+        if torch.cuda.is_available() and not force_cpu:
             device = torch.device("cuda")
             torch.cuda.empty_cache()
         else:
