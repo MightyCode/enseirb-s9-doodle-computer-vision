@@ -71,7 +71,7 @@ class BaseModel(nn.Module):
 
         if path:
             plt.savefig(path)
-            plt.clf()
+            plt.close()
         else:
             plt.show()
 
@@ -129,7 +129,7 @@ class BaseModel(nn.Module):
 
         if path:
             plt.savefig(path)
-            plt.clf()
+            plt.close()
         else:
             plt.show()
 

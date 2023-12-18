@@ -1,12 +1,11 @@
+
+from utils.PytorchUtils import PytorchUtils
+from sklearn.decomposition import PCA
+
 import matplotlib.pyplot as plt
 import random
 
-from utils.PytorchUtils import PytorchUtils
-
-from sklearn.decomposition import PCA
-
 import numpy as np
-import matplotlib.pyplot as plt
 
 class Visualisation:
     @staticmethod
@@ -50,7 +49,7 @@ class Visualisation:
             pack = model(inputs, labels)
             key_word = "encoded"
 
-            if use_embedding and "encoded_before" in pack.keys():
+            if not use_embedding and "encoded_before" in pack.keys():
                 key_word = "encoded_before"
 
             proj = pack[key_word]
@@ -79,7 +78,7 @@ class Visualisation:
 
         if path:
             plt.savefig(path)
-            plt.clf()
+            plt.close()
         else:
             plt.show()
 
