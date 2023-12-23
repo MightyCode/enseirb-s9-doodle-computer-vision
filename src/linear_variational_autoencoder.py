@@ -8,10 +8,11 @@ import torch
 import torch.nn as nn
 
 class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0):
-        super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
 
-        self.layer_sizes = layer_sizes
+        dropout = hyperparameters["dropout"]
+        batch_norm = hyperparameters["batch_norm"]
 
         for i in range(len(layer_sizes) - 2):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
@@ -59,7 +60,7 @@ class LinearVariationalAutoencoder(BaseVariationalAutoencoder):
     def decode(self, x):
         return self.decoder(x)
 
-    def forward(self, x, labels):
+    def forward(self, x, labels=None):
         encoded = self.encoder(x)
 
         #print("encoded", encoded.max(), encoded.min())

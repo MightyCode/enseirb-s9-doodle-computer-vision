@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 
 class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, rl=1, kl=0, latent_channels=64, class_number=8):
-        super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
         self.latent_type = "convolutional"
-
         self.layer_sizes = layer_sizes
-        self.latent_channels = latent_channels
+
+        dropout = hyperparameters["dropout"]
+        batch_norm = hyperparameters["batch_norm"]
+        self.latent_channels = hyperparameters["latent_channels"]
         
         kernel_size = 3
 
@@ -24,10 +26,10 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
                     self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm2d(layer_sizes[i+1]))
 
         # latent space
-        self.mu = nn.Conv2d(layer_sizes[-1], latent_channels, kernel_size=kernel_size, padding=1)
-        self.logvar = nn.Conv2d(layer_sizes[-1], latent_channels, kernel_size=kernel_size, padding=1)
+        self.mu = nn.Conv2d(layer_sizes[-1], self.latent_channels, kernel_size=kernel_size, padding=1)
+        self.logvar = nn.Conv2d(layer_sizes[-1], self.latent_channels, kernel_size=kernel_size, padding=1)
 
-        self.latent_space_output = nn.Conv2d(latent_channels, layer_sizes[-1], kernel_size=kernel_size, padding=1)
+        self.latent_space_output = nn.Conv2d(self.latent_channels, layer_sizes[-1], kernel_size=kernel_size, padding=1)
         
         # decoder layers
         for i in range(len(layer_sizes)-1, 0, -1):
@@ -45,7 +47,7 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
 
         self.latent_dim = self.get_latent_dim()
         embedding_dim = int(self.latent_dim[0] * self.latent_dim[1] * self.latent_dim[2])
-        self.embedding = nn.Embedding(num_embeddings=class_number, 
+        self.embedding = nn.Embedding(num_embeddings=len(classes), 
                                       embedding_dim=embedding_dim)
     
     def print_model(self):
@@ -58,7 +60,6 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
         print('decoder :')
         print(self.decoder)
     
-    
     def encode(self, x, labels=None):
         x = self.encoder(x)
 
@@ -70,12 +71,13 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn(mu.shape).to(self.device)
+
         return mu + eps * std
 
     def decode(self, z):
         latent_space_output = self.latent_space_output(z)
-        
         z = self.decoder(latent_space_output)
+
         return z
     
     def get_latent_dim(self):
@@ -85,6 +87,7 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
             self.encoded_height//=2
             self.encoded_width//=2
         self.encoded_num_channels = self.latent_channels
+        
         return (self.encoded_num_channels, self.encoded_width, self.encoded_height)
     
     def get_embed(self, labels):
@@ -105,7 +108,10 @@ class ConvVariationalAutoencoder2(BaseVariationalAutoencoder):
 
         mu, logvar = self.encode(x)
 
-        z = self.reparameterize(mu, logvar)
+        if self.sample_mode or self.training:
+            z = self.reparameterize(mu, logvar)
+        else:
+            z = mu
 
         embedding = self.get_embed(labels)
 

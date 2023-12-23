@@ -4,11 +4,14 @@ import torch
 import torch.nn as nn
 
 class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0):
-        super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
         self.latent_type = "convolutional-variational"
         
-        kernel_size = 3
+        dropout = hyperparameters["dropout"]
+        batch_norm = hyperparameters["batch_norm"]
+        kernel_size = hyperparameters["kernel_size"] if "kernel_size" in hyperparameters else 3
+        self.latent_vector_size = hyperparameters["latent_channels"] if "latent_channels" in hyperparameters else None
 
         # decoder layers
         for i in range(len(layer_sizes) - 1):
@@ -21,7 +24,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
                     self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm2d(layer_sizes[i+1]))
 
         # latent space
-        self.latent_dim = latent_dim
+
         self.encoded_width = self.width
         self.encoded_height = self.height
         for _ in range(len(layer_sizes)-2):
@@ -31,14 +34,14 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
 
         flattened_shape = int(self.encoded_height*self.encoded_width*self.encoded_num_channels)
 
-        if self.latent_dim == None:
-            self.latent_dim = flattened_shape
+        if self.latent_vector_size == None:
+            self.latent_vector_size = flattened_shape
 
         self.flatten = nn.Flatten()
-        latent_input_dim = self.latent_dim*2
+        latent_input_dim = self.latent_vector_size*2
         self.latent_space_input = nn.Linear(flattened_shape, latent_input_dim)
 
-        latent_output_dim = self.latent_dim
+        latent_output_dim = self.latent_vector_size
         self.latent_space_output = nn.Linear(latent_output_dim, flattened_shape)
         
         # decoder layers
@@ -71,7 +74,7 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         x = self.flatten(x)
 
         latent_space_input = self.latent_space_input(x)
-        split = latent_space_input.split(self.latent_dim, dim=1)
+        split = latent_space_input.split(self.latent_vector_size, dim=1)
         mu, logvar = split[0], split[1]
 
         return mu, logvar
@@ -93,14 +96,18 @@ class ConvVariationalAutoencoder(BaseVariationalAutoencoder):
         return z
 
     def get_latent_dim(self):
-        return self.latent_dim
+        return self.latent_vector_size
     
     def forward(self, x, labels=None):
         x = x.view(-1, 1, self.width, self.height)
 
         mu, logvar = self.encode(x)
 
-        z = self.reparameterize(mu, logvar)
+        if self.sample_mode or self.training:
+            z = self.reparameterize(mu, logvar)
+        else:
+            z = mu
+
         x_reconstructed = self.decode(z)
 
         return {

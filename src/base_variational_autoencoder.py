@@ -1,207 +1,53 @@
 import torch
-from torch.utils.data import DataLoader
 import torch.nn.functional as F
-
-from skimage.metrics import peak_signal_noise_ratio as psnr
-from skimage.metrics import structural_similarity as ssim
 
 from .base_model import BaseModel
 
-from utils.PytorchUtils import PytorchUtils
-import os
+from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity as LPIPS
 
 class BaseVariationalAutoencoder(BaseModel):
     def __init__(self, layer_sizes, device, width, height, classes, 
-                 encode_class=False,
-                 rl = 1.0,
-                 kl = 0.0):
+                 hyperparameters={}):
         super().__init__(layer_sizes, device, width, height, classes, 
-                 encode_class)
+                 hyperparameters)
 
-        self.rl = rl
-        self.kl = kl
+        self.rl = hyperparameters["rl"]
+        self.kl = hyperparameters["kl"]
+        self.lpips = hyperparameters["lpips"]
+        self.sample_mode = False
 
-    def vae_loss(self, mean, logvar, decoded, inputs):
+        self.lpips_evaluator = LPIPS(net_type='vgg').to(self.device)
+
+    def set_sample_mode(self, mode: bool):
+        self.sample_mode = mode
+        
+    def vae_loss(self, inputs, info):
+        mean = info["mu"]
+        logvar = info["sigma"]
+        decoded = info["decoded"]
+
         # Fonction de perte de reconstruction
-        reproduction_loss = F.mse_loss(decoded, inputs, reduction='sum')
+        reproduction_loss = F.mse_loss(decoded, inputs)
         
         # KL divergence entre la distribution latente et une distribution normale
-        KLD = - 0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+        KLD = - 0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp()) / (self.width * self.height)
 
         # Combinaison des deux termes de perte
-        return self.rl * reproduction_loss, self.kl * KLD
-
-    def train_autoencoder(self, train_loader: DataLoader, valid_loader: DataLoader, 
-                          optimizer, criterion=vae_loss, num_epochs=10, path=None):
-
-        self.losses = {
-            'train': {
-                "reconstruction_loss": [],
-                "kl_loss": [],
-                "total_loss": []
-            },
-            'validation': {
-                "reconstruction_loss": [],
-                "kl_loss": [],
-                "total_loss": []
-            }
+        return {
+            "rl_loss" : self.rl * reproduction_loss,
+            "kl_loss" : self.kl * KLD
         }
-
-        self.metrics = {
-            'train': {
-                'psnr': [],
-                'ssim': []
-            },
-            'validation': {
-                'psnr': [],
-                'ssim': []
-            }
-        }
-
-        epochs_to_perform = num_epochs
-        start_epoch = 0
     
-        print(f"Attempting to load weights from : {path}")
-        if path and os.path.exists(path):
-            print(f'loading weights from : {path}')
+    def lpips_loss(self, inputs, info):
+        loss = self.vae_loss(inputs, info)
 
-            checkpoint = PytorchUtils.load_checkpoint(path)
+        # LPIPS loss
 
-            self.load_state_dict(checkpoint['model_state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        decoded = info["decoded"]
 
-            epochs_to_perform = num_epochs - checkpoint['epoch']
-            original_num_epochs = num_epochs
-            start_epoch = checkpoint['epoch']
-            num_epochs = start_epoch+epochs_to_perform
+        decoded_rgb = decoded.unsqueeze(1).expand(-1, 3, -1, -1)
+        inputs_rgb = inputs.unsqueeze(1).expand(-1, 3, -1, -1)
+        
+        loss["lpips_loss"] = self.lpips_evaluator(decoded_rgb, inputs_rgb) * self.lpips
 
-            self.losses = checkpoint['losses']
-            self.metrics = checkpoint['metrics']
-
-        if(epochs_to_perform > 0):
-            for epoch in range(start_epoch, start_epoch+epochs_to_perform):
-                self.train()
-                # Train by batch of images
-                for data in train_loader:
-                    inputs, labels = data
-                    inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                    # zero the parameter gradients
-                    optimizer.zero_grad()
-                    
-                    # Forward pass
-                    pack = self.forward(inputs, labels=labels)
-
-                    mu = pack["mu"]
-                    sigma = pack["sigma"]
-
-                    decoded = pack["decoded"]
-
-                    rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
-                    loss = rl_loss + kl_loss
-
-                    # Backward pass
-                    loss.backward()
-                    optimizer.step()
-
-                # Train loss
-                self.losses['train']['reconstruction_loss'].append(rl_loss.item())
-                self.losses['train']['kl_loss'].append(kl_loss.item())
-                self.losses['train']['total_loss'].append(loss.item())
-
-                self.eval()
-
-                with torch.no_grad():
-
-                    # loop on validation to compute validation loss
-                    for data in valid_loader:
-                        inputs, labels = data
-                        inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                        # Forward pass
-                        pack = self.forward(inputs, labels=labels)
-
-                        mu = pack["mu"]
-                        sigma = pack["sigma"]
-
-                        decoded = pack["decoded"]
-
-                        rl_loss, kl_loss = criterion(mu, sigma, decoded, inputs)
-                        loss = rl_loss + kl_loss
-
-                    self.losses['validation']['reconstruction_loss'].append(round(rl_loss.item(), 2))
-                    self.losses['validation']['kl_loss'].append(round(kl_loss.item(), 2))
-                    self.losses['validation']['total_loss'].append(round(loss.item(), 2))
-
-                    # Calculate PSNR and SSIM for train and test sets
-                    train_psnr = 0
-                    train_ssim = 0
-                    validation_psnr = 0
-                    validation_ssim = 0
-
-                    nb_train_images = 0
-                    nb_valid_images = 0
-
-                    for data in train_loader:
-                        inputs, labels = data
-                        inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                        pack = self.forward(inputs, labels=labels)
-
-                        decoded = pack["decoded"]
-
-                        for i in range(inputs.size(0)):
-                            nb_train_images += 1
-                            img_as_tensor = inputs[i]
-                            decoded_as_tensor = decoded[i]
-
-                            image_matrix = img_as_tensor.cpu().detach().numpy()
-                            decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
-
-                            train_psnr += psnr(image_matrix, decoded_matrix)
-                            train_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
-
-                    for data in valid_loader:
-                        inputs, labels = data
-                        inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                        pack = self.forward(inputs, labels=labels)
-
-                        decoded = pack["decoded"]
-
-                        for i in range(inputs.size(0)):
-                            nb_valid_images += 1
-                            img_as_tensor = inputs[i]
-                            decoded_as_tensor = decoded[i]
-
-                            image_matrix = img_as_tensor.cpu().detach().numpy()
-                            decoded_matrix = decoded_as_tensor.squeeze().cpu().detach().numpy()
-
-                            validation_psnr += psnr(image_matrix, decoded_matrix)
-                            validation_ssim += ssim(image_matrix, decoded_matrix, data_range=decoded_matrix.max() - decoded_matrix.min())
-
-                train_psnr /= nb_train_images
-                train_ssim /= nb_train_images
-                validation_psnr /= nb_valid_images
-                validation_ssim /= nb_valid_images
-
-                self.metrics['train']['psnr'].append(round(train_psnr, 2))
-                self.metrics['train']['ssim'].append(round(train_ssim, 2))
-                self.metrics['validation']['psnr'].append(round(validation_psnr, 2))
-                self.metrics['validation']['ssim'].append(round(validation_ssim, 2))
-                
-                print(f'Ep [{epoch+1}/{num_epochs}]', end=" ")
-                print(f'T L: {self.losses["train"]["total_loss"][-1]:.4f}', end=" ")
-                print(f'T RL: {self.losses["train"]["reconstruction_loss"][-1]:.4f}', end=" ")
-                print(f'T KL: {self.losses["train"]["kl_loss"][-1]:.4f}', end=" ")
-                print(f'V L: {self.losses["validation"]["total_loss"][-1]:.4f}', end=" ")
-                print(f'V RL: {self.losses["validation"]["reconstruction_loss"][-1]:.4f}', end=" ")
-                print(f'V KL: {self.losses["validation"]["kl_loss"][-1]:.4f}', end=" ")
-                print(f'T PSNR: {self.metrics["train"]["psnr"][-1]:.4f}', end=" ")
-                print(f'T SSIM: {self.metrics["train"]["ssim"][-1]:.4f}', end=" ")
-                print(f'V PSNR: {self.metrics["validation"]["psnr"][-1]:.4f}', end=" ")
-                print(f'V SSIM: {self.metrics["validation"]["ssim"][-1]:.4f}')
-
-            PytorchUtils.save_checkpoint(self, num_epochs, self.metrics, self.losses, optimizer)
-        else:
-            print(f'attempting to train {original_num_epochs} epochs but {start_epoch} epochs already done -> no training performed')
+        return loss

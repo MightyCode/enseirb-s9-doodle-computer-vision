@@ -3,10 +3,10 @@ from .conv_autoencoder import ConvAutoencoder
 import torch.nn as nn
 
 class ConvAutoencoderEmbed(ConvAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, class_number=8):
-        super().__init__(layer_sizes, device, width, height, classes, dropout, batch_norm)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes,hyperparameters)
         self.latent_type = "convolutional"
-
+        
         self.encoded_width = self.width
         self.encoded_height = self.height
         for _ in range(len(layer_sizes)-2):
@@ -16,7 +16,7 @@ class ConvAutoencoderEmbed(ConvAutoencoder):
 
         flattened_shape = int(self.encoded_height*self.encoded_width*self.encoded_num_channels)
 
-        self.embedding = nn.Embedding(num_embeddings=class_number, 
+        self.embedding = nn.Embedding(num_embeddings=len(classes), 
                                       embedding_dim=flattened_shape)
 
 

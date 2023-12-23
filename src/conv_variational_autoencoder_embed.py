@@ -3,11 +3,11 @@ from .conv_variational_autoencoder import ConvVariationalAutoencoder
 import torch.nn as nn
 
 class ConvVariationalAutoencoderEmbed(ConvVariationalAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, latent_dim=None, dropout=0., batch_norm=True, rl=1, kl=0, class_number=8):
-        super().__init__(layer_sizes, device, width, height, classes, rl=rl, kl=kl)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
 
-        self.embedding = nn.Embedding(num_embeddings=class_number, 
-                                      embedding_dim=self.latent_dim)
+        self.embedding = nn.Embedding(num_embeddings=len(classes), 
+                                      embedding_dim=self.latent_vector_size)
         
     def get_embed(self, labels):
         embedding = self.embedding(labels)
@@ -20,7 +20,11 @@ class ConvVariationalAutoencoderEmbed(ConvVariationalAutoencoder):
         x = x.view(-1, 1, self.width, self.height)
 
         mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
+        
+        if self.sample_mode or self.training:
+            z = self.reparameterize(mu, logvar)
+        else:
+            z = mu
 
         embedding = self.get_embed(labels)
 

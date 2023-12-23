@@ -4,10 +4,12 @@ import torch
 import torch.nn as nn
 
 class LinearAutoencoderEmbed(BaseAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True, class_number=8):
-        super().__init__(layer_sizes, device, width, height, classes, encode_class=True)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        hyperparameters["encode_classes"] = True
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
 
-        self.layer_sizes = layer_sizes
+        dropout = hyperparameters["dropout"]
+        batch_norm = hyperparameters["batch_norm"]
 
         for i in range(len(layer_sizes) - 1):
             self.encoder.add_module(f"encoder_{i}", nn.Linear(layer_sizes[i], layer_sizes[i+1]))
@@ -17,7 +19,7 @@ class LinearAutoencoderEmbed(BaseAutoencoder):
                 if batch_norm:
                     self.encoder.add_module(f"encoder_batchnorm_{i}", nn.BatchNorm1d(layer_sizes[i+1]))
 
-        self.embedding = nn.Embedding(class_number, layer_sizes[-1])
+        self.embedding = nn.Embedding(len(classes), layer_sizes[-1])
 
         # Add decoder layers
         for i in range(len(layer_sizes)-1, 0, -1):

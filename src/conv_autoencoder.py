@@ -3,10 +3,13 @@ from .base_autoencoder import BaseAutoencoder
 import torch.nn as nn
 
 class ConvAutoencoder(BaseAutoencoder):
-    def __init__(self, layer_sizes, device, width, height, classes, dropout=0., batch_norm=True):
-        super().__init__(layer_sizes, device, width, height, classes)
+    def __init__(self, layer_sizes, device, width, height, classes, hyperparameters={}):
+        super().__init__(layer_sizes, device, width, height, classes, hyperparameters)
         self.latent_type = "convolutional"
         kernel_size = 3
+
+        dropout = hyperparameters["dropout"]
+        batch_norm = hyperparameters["batch_norm"]
 
         for i in range(len(layer_sizes) - 1):
             self.encoder.add_module(f"encoder_{i}", nn.Conv2d(layer_sizes[i], layer_sizes[i+1], kernel_size=kernel_size, padding=1))
